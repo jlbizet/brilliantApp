@@ -1,0 +1,46 @@
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuthStore } from './stores';
+import MainLayout from './components/layout/MainLayout';
+import LoginPage from './features/auth/LoginPage';
+import DashboardPage from './features/dashboard/DashboardPage';
+import PatientsPage from './features/patients/PatientsPage';
+import PatientDetailPage from './features/patients/PatientDetailPage';
+import AppointmentsPage from './features/appointments/AppointmentsPage';
+import TreatmentsPage from './features/treatments/TreatmentsPage';
+import BillingPage from './features/billing/BillingPage';
+import InventoryPage from './features/inventory/InventoryPage';
+import SettingsPage from './features/settings/SettingsPage';
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+    const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+    if (!isAuthenticated) return <Navigate to="/login" replace />;
+    return <>{children}</>;
+}
+
+export default function App() {
+    return (
+        <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+                path="/*"
+                element={
+                    <ProtectedRoute>
+                        <MainLayout>
+                            <Routes>
+                                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                                <Route path="/dashboard" element={<DashboardPage />} />
+                                <Route path="/patients" element={<PatientsPage />} />
+                                <Route path="/patients/:id" element={<PatientDetailPage />} />
+                                <Route path="/appointments" element={<AppointmentsPage />} />
+                                <Route path="/treatments" element={<TreatmentsPage />} />
+                                <Route path="/billing" element={<BillingPage />} />
+                                <Route path="/inventory" element={<InventoryPage />} />
+                                <Route path="/settings" element={<SettingsPage />} />
+                            </Routes>
+                        </MainLayout>
+                    </ProtectedRoute>
+                }
+            />
+        </Routes>
+    );
+}
