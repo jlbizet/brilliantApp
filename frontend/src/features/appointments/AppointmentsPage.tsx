@@ -21,6 +21,16 @@ export default function AppointmentsPage() {
     const queryClient = useQueryClient();
     const calendarRef = useRef<any>(null);
     const [showForm, setShowForm] = useState(false);
+
+    // Helper to format date for inputs without UTC shift
+    const formatLocalDate = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
     const [showWaitlistForm, setShowWaitlistForm] = useState(false);
     const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
@@ -156,12 +166,13 @@ export default function AppointmentsPage() {
                                         const date = e.target.value;
                                         if (!date) return;
                                         const time = formData.startTime ? formData.startTime.split('T')[1]?.slice(0, 5) : '09:00';
-                                        const start = `${date}T${time}`;
-                                        const endDate = new Date(new Date(start).getTime() + 30 * 60000);
+                                        const startStr = `${date}T${time}`;
+                                        const start = new Date(startStr);
+                                        const end = new Date(start.getTime() + 30 * 60000);
                                         setFormData({
                                             ...formData,
-                                            startTime: start,
-                                            endTime: endDate.toISOString().slice(0, 16)
+                                            startTime: startStr,
+                                            endTime: formatLocalDate(end)
                                         });
                                     }}
                                     required
@@ -177,16 +188,18 @@ export default function AppointmentsPage() {
                                         const time = e.target.value;
                                         if (!time) return;
                                         const date = formData.startTime ? formData.startTime.split('T')[0] : new Date().toISOString().split('T')[0];
-                                        const start = `${date}T${time}`;
-                                        const currentStart = new Date(formData.startTime);
-                                        const currentEnd = new Date(formData.endTime);
+                                        const startStr = `${date}T${time}`;
+                                        const start = new Date(startStr);
+
+                                        const currentStart = new Date(formData.startTime || startStr);
+                                        const currentEnd = new Date(formData.endTime || new Date(currentStart.getTime() + 30 * 60000));
                                         const durationMs = currentEnd.getTime() - currentStart.getTime();
-                                        const newEnd = new Date(new Date(start).getTime() + (isNaN(durationMs) ? 30 * 60000 : durationMs));
+                                        const end = new Date(start.getTime() + (isNaN(durationMs) ? 30 * 60000 : durationMs));
 
                                         setFormData({
                                             ...formData,
-                                            startTime: start,
-                                            endTime: newEnd.toISOString().slice(0, 16)
+                                            startTime: startStr,
+                                            endTime: formatLocalDate(end)
                                         });
                                     }}
                                     required
@@ -205,7 +218,7 @@ export default function AppointmentsPage() {
                                             if (!formData.startTime) return;
                                             const start = new Date(formData.startTime);
                                             const end = new Date(start.getTime() + mins * 60000);
-                                            setFormData({ ...formData, endTime: end.toISOString().slice(0, 16) });
+                                            setFormData({ ...formData, endTime: formatLocalDate(end) });
                                         }}
                                         className="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 hover:bg-primary-100 hover:text-primary-700 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-primary-900/30 transition-colors"
                                     >
@@ -296,7 +309,10 @@ export default function AppointmentsPage() {
                             const newEnd = info.event.end?.toISOString();
                             if (newStart && newEnd) {
                                 appointmentsApi.update(apt.id, { startTime: newStart, endTime: newEnd })
-                                    .then(() => toast.success(t('appointments.move_success') || 'Appointment moved'))
+                                    .then(() => {
+                                        toast.success(t('appointments.move_success') || 'Appointment moved');
+                                        queryClient.invalidateQueries({ queryKey: ['calendar-appointments'] });
+                                    })
                                     .catch(() => {
                                         info.revert();
                                         toast.error(t('appointments.move_error') || 'Could not move appointment');
@@ -436,15 +452,24 @@ export default function AppointmentsPage() {
                         })
                         .catch(() => toast.error(t('appointments.update_error') || 'Failed to update status'));
                 }}
+                onUpdate={(id, data) => {
+                    appointmentsApi.update(id, data)
+                        .then(() => {
+                            toast.success(t('appointments.update_success') || 'Appointment updated');
+                            queryClient.invalidateQueries({ queryKey: ['calendar-appointments'] });
+                            setSelectedAppointment(null);
+                        })
+                        .catch(() => toast.error(t('appointments.update_error') || 'Failed to update appointment'));
+                }}
                 onDelete={(id) => {
-                    if (confirm(t('appointments.cancel_confirm') || 'Are you sure you want to cancel this appointment?')) {
+                    if (confirm(t('appointments.delete_confirm') || 'Are you sure you want to permanently delete this appointment?')) {
                         appointmentsApi.delete(id)
                             .then(() => {
-                                toast.success(t('appointments.cancel_success') || 'Appointment cancelled');
+                                toast.success(t('appointments.delete_success') || 'Appointment deleted');
                                 queryClient.invalidateQueries({ queryKey: ['calendar-appointments'] });
                                 setSelectedAppointment(null);
                             })
-                            .catch(() => toast.error(t('appointments.cancel_error') || 'Failed to cancel appointment'));
+                            .catch(() => toast.error(t('appointments.delete_error') || 'Failed to delete appointment'));
                     }
                 }}
             />

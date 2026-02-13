@@ -20,6 +20,7 @@
         "status": "Estado",
         "date": "Fecha",
         "time": "Hora",
+        "appointment": "Cita",
         "actions": "Acciones",
         "loading": "Cargando...",
         "no_results": "No se encontraron resultados",
@@ -50,7 +51,12 @@
         "in_progress": "En Curso",
         "completed": "Completada",
         "cancelled": "Cancelada",
-        "no_show": "No Presentada"
+        "no_show": "No Presentada",
+        "update_success": "Cita actualizada",
+        "update_error": "Error al actualizar la cita",
+        "delete_confirm": "¿Está seguro de que desea eliminar permanentemente esta cita?",
+        "delete_success": "Cita eliminada",
+        "delete_error": "Error al eliminar la cita"
     },
     "chat": {
         "assistant_title": "Asistente Dental",
