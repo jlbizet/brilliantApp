@@ -1,20 +1,22 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { UserRole } from '../../types';
 import { useAuthStore, useUIStore } from '../../stores';
 import {
     LayoutDashboard, Users, Calendar, Stethoscope, Receipt,
     Package, Settings, LogOut, ChevronLeft, ChevronRight, Heart,
-    FileText,
+    FileText, Shield,
 } from 'lucide-react';
 
-const navItems = [
+const navItems: { path: string; labelKey: string; icon: any; roles?: UserRole[] }[] = [
     { path: '/dashboard', labelKey: 'common.dashboard', icon: LayoutDashboard },
     { path: '/patients', labelKey: 'common.patients', icon: Users },
+    { path: '/staff', labelKey: 'common.staff', icon: Shield, roles: ['ADMIN'] },
     { path: '/appointments', labelKey: 'common.appointments', icon: Calendar },
     { path: '/treatments', labelKey: 'common.treatments', icon: Stethoscope },
     { path: '/prescriptions', labelKey: 'common.prescriptions', icon: FileText },
-    { path: '/billing', labelKey: 'common.billing', icon: Receipt },
-    { path: '/inventory', labelKey: 'common.inventory', icon: Package },
+    { path: '/billing', labelKey: 'common.billing', icon: Receipt, roles: ['ADMIN', 'DENTIST', 'RECEPTIONIST'] },
+    { path: '/inventory', labelKey: 'common.inventory', icon: Package, roles: ['ADMIN', 'DENTIST', 'HYGIENIST', 'RECEPTIONIST'] },
     { path: '/settings', labelKey: 'common.settings', icon: Settings },
 ];
 
@@ -49,22 +51,24 @@ export default function Sidebar() {
 
             {/* Navigation */}
             <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-                {navItems.map(({ path, labelKey, icon: Icon }) => (
-                    <NavLink
-                        key={path}
-                        to={path}
-                        className={({ isActive }) =>
-                            `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
+                {navItems
+                    .filter(item => !item.roles || (user?.role && item.roles.includes(user.role as UserRole)))
+                    .map(({ path, labelKey, icon: Icon }) => (
+                        <NavLink
+                            key={path}
+                            to={path}
+                            className={({ isActive }) =>
+                                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
               ${isActive
-                                ? 'bg-primary-50 dark:bg-primary-950/30 text-primary-700 dark:text-primary-400 shadow-sm'
-                                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'
-                            }`
-                        }
-                    >
-                        <Icon className="w-5 h-5 flex-shrink-0" />
-                        {sidebarOpen && <span className="animate-fade-in">{t(labelKey)}</span>}
-                    </NavLink>
-                ))}
+                                    ? 'bg-primary-50 dark:bg-primary-950/30 text-primary-700 dark:text-primary-400 shadow-sm'
+                                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'
+                                }`
+                            }
+                        >
+                            <Icon className="w-5 h-5 flex-shrink-0" />
+                            {sidebarOpen && <span className="animate-fade-in">{t(labelKey)}</span>}
+                        </NavLink>
+                    ))}
             </nav>
 
             {/* User info & collapse */}

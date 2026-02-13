@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Phone, Mail, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Phone, Mail, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../../stores';
 import { patientsApi } from '../../api';
 import type { Patient } from '../../types';
 
 export default function PatientsPage() {
     const { t } = useTranslation();
     const queryClient = useQueryClient();
+    const { user } = useAuthStore();
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
@@ -31,6 +33,21 @@ export default function PatientsPage() {
         onError: (err: any) => toast.error(err.response?.data?.message?.[0] || t('patients.create_error') || 'Failed to create patient'),
     });
 
+    const deleteMutation = useMutation({
+        mutationFn: patientsApi.delete,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['patients'] });
+            toast.success(t('patients.delete_success') || 'Patient deactivated successfully');
+        },
+        onError: (err: any) => toast.error(t('patients.delete_error') || 'Failed to deactivate patient'),
+    });
+
+    const handleDelete = (id: string, name: string) => {
+        if (window.confirm(t('patients.delete_confirm', { name }) || `Are you sure you want to delete ${name}?`)) {
+            deleteMutation.mutate(id);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -38,9 +55,11 @@ export default function PatientsPage() {
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('patients.title')}</h1>
                     <p className="text-gray-500 text-sm mt-1">{t('patients.total_count', { count: patients?.meta.total || 0 })}</p>
                 </div>
-                <button onClick={() => setShowForm(!showForm)} className="btn-primary">
-                    <Plus className="w-4 h-4" /> {t('patients.add')}
-                </button>
+                {['ADMIN', 'DENTIST', 'RECEPTIONIST'].includes(user?.role as string) && (
+                    <button onClick={() => setShowForm(!showForm)} className="btn-primary">
+                        <Plus className="w-4 h-4" /> {t('patients.add')}
+                    </button>
+                )}
             </div>
 
             {/* Create Form */}
@@ -125,9 +144,20 @@ export default function PatientsPage() {
                                     <td><span className="badge badge-neutral">{t(`patients.gender_${patient.gender.toLowerCase()}`)}</span></td>
                                     <td className="text-sm font-medium">{patient._count?.appointments || 0}</td>
                                     <td>
-                                        <Link to={`/patients/${patient.id}`} className="text-primary-600 hover:text-primary-700 text-sm font-medium">
-                                            {t('patients.view_details')} →
-                                        </Link>
+                                        <div className="flex items-center gap-3">
+                                            <Link to={`/patients/${patient.id}`} className="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                                                {t('patients.view_details')} →
+                                            </Link>
+                                            {['ADMIN', 'RECEPTIONIST'].includes(user?.role as string) && (
+                                                <button
+                                                    onClick={() => handleDelete(patient.id, `${patient.firstName} ${patient.lastName}`)}
+                                                    className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
+                                                    title={t('common.delete')}
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Phone, Mail, Calendar, Heart, AlertTriangle, FileText, Activity, Layers, Edit2, Check, X, Stethoscope } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../../stores';
 import { patientsApi } from '../../api';
 import DocumentsTab from './components/DocumentsTab';
 import ClinicalHistoryTab from './components/ClinicalHistoryTab';
@@ -17,6 +18,7 @@ export default function PatientDetailPage() {
     const { t } = useTranslation();
     const { id } = useParams<{ id: string }>();
     const queryClient = useQueryClient();
+    const { user } = useAuthStore();
     const [activeTab, setActiveTab] = useState<TabType>('overview');
     const [isEditing, setIsEditing] = useState(false);
 
@@ -82,22 +84,24 @@ export default function PatientDetailPage() {
                 <Link to="/patients" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors">
                     <ArrowLeft className="w-4 h-4" /> {t('patients.back')}
                 </Link>
-                <div className="flex gap-2">
-                    {!isEditing ? (
-                        <button onClick={handleEditStart} className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-2">
-                            <Edit2 className="w-3.5 h-3.5" /> {t('patients.edit_profile')}
-                        </button>
-                    ) : (
-                        <>
-                            <button onClick={() => setIsEditing(false)} className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-2">
-                                <X className="w-3.5 h-3.5" /> {t('common.cancel')}
+                {['ADMIN', 'DENTIST', 'RECEPTIONIST'].includes(user?.role as string) && (
+                    <div className="flex gap-2">
+                        {!isEditing ? (
+                            <button onClick={handleEditStart} className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-2">
+                                <Edit2 className="w-3.5 h-3.5" /> {t('patients.edit_profile')}
                             </button>
-                            <button onClick={handleEditSave} className="btn-primary py-1.5 px-3 text-xs flex items-center gap-2">
-                                <Check className="w-3.5 h-3.5" /> {t('common.save')}
-                            </button>
-                        </>
-                    )}
-                </div>
+                        ) : (
+                            <>
+                                <button onClick={() => setIsEditing(false)} className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-2">
+                                    <X className="w-3.5 h-3.5" /> {t('common.cancel')}
+                                </button>
+                                <button onClick={handleEditSave} className="btn-primary py-1.5 px-3 text-xs flex items-center gap-2">
+                                    <Check className="w-3.5 h-3.5" /> {t('common.save')}
+                                </button>
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Patient Header Card */}

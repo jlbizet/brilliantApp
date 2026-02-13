@@ -4,10 +4,13 @@ import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { PatientsService } from './patients.service';
 import { CreatePatientDto, UpdatePatientDto, CreateMedicalHistoryDto, CreateAllergyDto } from './dto';
 import { PaginationDto } from '../../common/dto';
+import { Roles } from '../../common/decorators';
+import { RolesGuard } from '../../common/guards';
+import { UserRole } from '@prisma/client';
 
 @ApiTags('Patients')
 @Controller('patients')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @ApiBearerAuth()
 export class PatientsController {
     constructor(private readonly patientsService: PatientsService) { }
@@ -37,30 +40,35 @@ export class PatientsController {
     }
 
     @Delete(':id')
+    @Roles(UserRole.ADMIN)
     @ApiOperation({ summary: 'Deactivate a patient (soft delete)' })
     remove(@Param('id') id: string) {
         return this.patientsService.remove(id);
     }
 
     @Post(':id/medical-history')
+    @Roles(UserRole.ADMIN, UserRole.DENTIST, UserRole.HYGIENIST)
     @ApiOperation({ summary: 'Add medical history entry' })
     addMedicalHistory(@Param('id') id: string, @Body() dto: CreateMedicalHistoryDto) {
         return this.patientsService.addMedicalHistory(id, dto);
     }
 
     @Delete('medical-history/:historyId')
+    @Roles(UserRole.ADMIN, UserRole.DENTIST, UserRole.HYGIENIST)
     @ApiOperation({ summary: 'Remove medical history entry' })
     removeMedicalHistory(@Param('historyId') id: string) {
         return this.patientsService.removeMedicalHistory(id);
     }
 
     @Post(':id/allergies')
+    @Roles(UserRole.ADMIN, UserRole.DENTIST, UserRole.HYGIENIST)
     @ApiOperation({ summary: 'Add allergy' })
     addAllergy(@Param('id') id: string, @Body() dto: CreateAllergyDto) {
         return this.patientsService.addAllergy(id, dto);
     }
 
     @Delete('allergies/:allergyId')
+    @Roles(UserRole.ADMIN, UserRole.DENTIST, UserRole.HYGIENIST)
     @ApiOperation({ summary: 'Remove allergy' })
     removeAllergy(@Param('allergyId') id: string) {
         return this.patientsService.removeAllergy(id);

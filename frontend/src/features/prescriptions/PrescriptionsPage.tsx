@@ -3,12 +3,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Plus, Search, FileText, Trash2, Edit, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../../stores';
 import { prescriptionsApi, patientsApi } from '../../api';
 import type { Prescription, Patient } from '../../types';
 
 export default function PrescriptionsPage() {
     const { t } = useTranslation();
     const queryClient = useQueryClient();
+    const { user } = useAuthStore();
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
@@ -128,9 +130,11 @@ export default function PrescriptionsPage() {
                         {t('prescriptions.total_count', { count: filteredPrescriptions?.length || 0 }) || `${filteredPrescriptions?.length || 0} prescriptions`}
                     </p>
                 </div>
-                <button onClick={() => setShowForm(!showForm)} className="btn-primary">
-                    <Plus className="w-4 h-4" /> {editingId ? t('prescriptions.cancel_edit') || 'Cancel Edit' : t('prescriptions.add') || 'Add Prescription'}
-                </button>
+                {['ADMIN', 'DENTIST'].includes(user?.role as string) && (
+                    <button onClick={() => setShowForm(!showForm)} className="btn-primary">
+                        <Plus className="w-4 h-4" /> {editingId ? t('prescriptions.cancel_edit') || 'Cancel Edit' : t('prescriptions.add') || 'Add Prescription'}
+                    </button>
+                )}
             </div>
 
             {/* Create/Edit Form */}
@@ -292,24 +296,26 @@ export default function PrescriptionsPage() {
                                         </div>
                                     )}
                                 </div>
-                                <div className="flex gap-2 ml-4">
-                                    <button
-                                        onClick={() => handleEdit(prescription)}
-                                        className="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                                    >
-                                        <Edit className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            if (confirm(t('prescriptions.confirm_delete') || 'Are you sure you want to delete this prescription?')) {
-                                                deleteMutation.mutate(prescription.id);
-                                            }
-                                        }}
-                                        className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
+                                {['ADMIN', 'DENTIST'].includes(user?.role as string) && (
+                                    <div className="flex gap-2 ml-4">
+                                        <button
+                                            onClick={() => handleEdit(prescription)}
+                                            className="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                        >
+                                            <Edit className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (confirm(t('prescriptions.confirm_delete') || 'Are you sure you want to delete this prescription?')) {
+                                                    deleteMutation.mutate(prescription.id);
+                                                }
+                                            }}
+                                            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}

@@ -3,25 +3,30 @@ import { useTranslation } from 'react-i18next';
 import { Users, Calendar, Receipt, Package, TrendingUp, Activity, AlertTriangle, ArrowUpRight } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { analyticsApi } from '../../api';
+import { useAuthStore } from '../../stores';
 
 const COLORS = ['#338dfc', '#22c55e', '#f59e0b', '#f43f5e', '#8b5cf6', '#0ea5e9'];
 
 export default function DashboardPage() {
     const { t } = useTranslation();
+    const { user } = useAuthStore();
     const { data: stats } = useQuery({ queryKey: ['dashboard-stats'], queryFn: analyticsApi.getDashboard });
     const { data: revenueChart } = useQuery({ queryKey: ['revenue-chart'], queryFn: () => analyticsApi.getRevenueChart(12) });
     const { data: patientGrowth } = useQuery({ queryKey: ['patient-growth'], queryFn: () => analyticsApi.getPatientGrowth(12) });
     const { data: appointmentStats } = useQuery({ queryKey: ['appointment-stats'], queryFn: analyticsApi.getAppointmentStats });
     const { data: recentActivity } = useQuery({ queryKey: ['recent-activity'], queryFn: analyticsApi.getRecentActivity });
 
+    const isHygienist = user?.role === 'HYGIENIST';
+    const canViewRevenue = ['ADMIN', 'RECEPTIONIST'].includes(user?.role as string);
+
     const statCards = [
         { label: t('dashboard.stat_total_patients'), value: stats?.totalPatients || 0, icon: Users, color: 'from-primary-500 to-primary-600', bgGlow: 'bg-primary-50 dark:bg-primary-950/20' },
         { label: t('dashboard.stat_today_appointments'), value: stats?.todayAppointments || 0, icon: Calendar, color: 'from-emerald-500 to-emerald-600', bgGlow: 'bg-emerald-50 dark:bg-emerald-950/20' },
-        { label: t('dashboard.stat_monthly_revenue'), value: `$${(stats?.monthRevenue || 0).toLocaleString()}`, icon: TrendingUp, color: 'from-amber-500 to-amber-600', bgGlow: 'bg-amber-50 dark:bg-amber-950/20' },
-        { label: t('dashboard.stat_pending_invoices'), value: stats?.pendingInvoices || 0, icon: Receipt, color: 'from-violet-500 to-violet-600', bgGlow: 'bg-violet-50 dark:bg-violet-950/20' },
+        { label: t('dashboard.stat_monthly_revenue'), value: `$${(stats?.monthRevenue || 0).toLocaleString()}`, icon: TrendingUp, color: 'from-amber-500 to-amber-600', bgGlow: 'bg-amber-50 dark:bg-amber-950/20', hide: isHygienist },
+        { label: t('dashboard.stat_pending_invoices'), value: stats?.pendingInvoices || 0, icon: Receipt, color: 'from-violet-500 to-violet-600', bgGlow: 'bg-violet-50 dark:bg-violet-950/20', hide: isHygienist },
         { label: t('dashboard.stat_month_appointments'), value: stats?.monthAppointments || 0, icon: Activity, color: 'from-sky-500 to-sky-600', bgGlow: 'bg-sky-50 dark:bg-sky-950/20' },
         { label: t('dashboard.stat_low_stock'), value: stats?.lowStockItems || 0, icon: AlertTriangle, color: 'from-rose-500 to-rose-600', bgGlow: 'bg-rose-50 dark:bg-rose-950/20' },
-    ];
+    ].filter(card => !card.hide);
 
     const pieData = appointmentStats?.byStatus?.map((s: any) => ({
         name: t(`appointments.${s.status.toLowerCase()}`), value: s._count,
@@ -52,26 +57,28 @@ export default function DashboardPage() {
             </div>
 
             {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className={`grid grid-cols-1 ${canViewRevenue ? 'lg:grid-cols-3' : ''} gap-6`}>
                 {/* Revenue Chart */}
-                <div className="lg:col-span-2 card">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{t('dashboard.revenue_overview')}</h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <AreaChart data={revenueChart || []}>
-                            <defs>
-                                <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#338dfc" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#338dfc" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                            <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#9ca3af" />
-                            <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" tickFormatter={(v) => `$${v}`} />
-                            <Tooltip formatter={(v: any) => [`$${v.toLocaleString()}`, t('billing.revenue') || 'Revenue']} />
-                            <Area type="monotone" dataKey="revenue" stroke="#338dfc" strokeWidth={2} fill="url(#revenueGrad)" />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                </div>
+                {canViewRevenue && (
+                    <div className="lg:col-span-2 card">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">{t('dashboard.revenue_overview')}</h3>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <AreaChart data={revenueChart || []}>
+                                <defs>
+                                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#338dfc" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#338dfc" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#9ca3af" />
+                                <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" tickFormatter={(v) => `$${v}`} />
+                                <Tooltip formatter={(v: any) => [`$${v.toLocaleString()}`, t('billing.revenue') || 'Revenue']} />
+                                <Area type="monotone" dataKey="revenue" stroke="#338dfc" strokeWidth={2} fill="url(#revenueGrad)" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                )}
 
                 {/* Appointment Status Pie */}
                 <div className="card">

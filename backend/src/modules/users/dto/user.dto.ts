@@ -11,6 +11,7 @@ export class CreateUserDto {
     @ApiPropertyOptional() @IsOptional() @IsString() phone?: string;
     @ApiPropertyOptional() @IsOptional() @IsString() specialization?: string;
     @ApiPropertyOptional() @IsOptional() @IsString() licenseNumber?: string;
+    @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
 }
 
 export class UpdateUserDto extends PartialType(CreateUserDto) {

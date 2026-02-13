@@ -21,7 +21,7 @@ export class UsersService {
         const [data, total] = await Promise.all([
             this.prisma.user.findMany({
                 where,
-                select: { id: true, email: true, firstName: true, lastName: true, role: true, phone: true, specialization: true, isActive: true, lastLoginAt: true, createdAt: true },
+                select: { id: true, email: true, firstName: true, lastName: true, role: true, phone: true, specialization: true, licenseNumber: true, isActive: true, lastLoginAt: true, createdAt: true },
                 skip: query.skip,
                 take: query.limit,
                 orderBy: { [query.sortBy || 'createdAt']: query.sortOrder || 'desc' },
@@ -48,7 +48,7 @@ export class UsersService {
         const hashedPassword = await bcrypt.hash(dto.password, 12);
         return this.prisma.user.create({
             data: { ...dto, password: hashedPassword },
-            select: { id: true, email: true, firstName: true, lastName: true, role: true, createdAt: true },
+            select: { id: true, email: true, firstName: true, lastName: true, role: true, phone: true, specialization: true, licenseNumber: true, isActive: true, createdAt: true },
         });
     }
 
@@ -61,7 +61,7 @@ export class UsersService {
         return this.prisma.user.update({
             where: { id },
             data,
-            select: { id: true, email: true, firstName: true, lastName: true, role: true, isActive: true },
+            select: { id: true, email: true, firstName: true, lastName: true, role: true, phone: true, specialization: true, licenseNumber: true, isActive: true },
         });
     }
 
@@ -74,7 +74,7 @@ export class UsersService {
     async getDentists() {
         return this.prisma.user.findMany({
             where: { role: { in: ['DENTIST', 'HYGIENIST'] }, isActive: true },
-            select: { id: true, firstName: true, lastName: true, role: true, specialization: true },
+            select: { id: true, firstName: true, lastName: true, role: true, specialization: true, licenseNumber: true },
             orderBy: { firstName: 'asc' },
         });
     }

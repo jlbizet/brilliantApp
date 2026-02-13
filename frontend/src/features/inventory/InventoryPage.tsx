@@ -3,12 +3,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Package, AlertTriangle, Plus, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../../stores';
 import { inventoryApi } from '../../api';
 import type { InventoryItem } from '../../types';
 
 export default function InventoryPage() {
     const { t } = useTranslation();
     const queryClient = useQueryClient();
+    const { user } = useAuthStore();
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
@@ -41,9 +43,11 @@ export default function InventoryPage() {
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('inventory.title')}</h1>
                     <p className="text-gray-500 text-sm mt-1">{t('inventory.manage')}</p>
                 </div>
-                <button onClick={() => setShowForm(!showForm)} className="btn-primary">
-                    <Plus className="w-4 h-4" /> {t('inventory.add')}
-                </button>
+                {['ADMIN', 'RECEPTIONIST'].includes(user?.role as string) && (
+                    <button onClick={() => setShowForm(!showForm)} className="btn-primary">
+                        <Plus className="w-4 h-4" /> {t('inventory.add')}
+                    </button>
+                )}
             </div>
 
             {/* Low Stock Alert */}

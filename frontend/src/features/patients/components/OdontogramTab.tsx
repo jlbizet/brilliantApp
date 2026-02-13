@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { AlertCircle, Plus, Trash2, Check, PenTool } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../../../stores';
 import OdontogramGrid from './odontogram/OdontogramGrid';
 import { Surface, ConditionType } from './odontogram/Tooth';
 import { patientsApi, odontogramApi } from '../../../api';
@@ -14,6 +15,7 @@ interface OdontogramTabProps {
 export default function OdontogramTab({ patientId }: OdontogramTabProps) {
     const { t } = useTranslation();
     const queryClient = useQueryClient();
+    const { user } = useAuthStore();
     const [selectedTool, setSelectedTool] = useState<ConditionType>('CARIES');
     const [isChild, setIsChild] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -80,41 +82,43 @@ export default function OdontogramTab({ patientId }: OdontogramTabProps) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className={`grid grid-cols-1 ${['ADMIN', 'DENTIST', 'HYGIENIST'].includes(user?.role as string) ? 'lg:grid-cols-4' : ''} gap-6`}>
                 {/* Tools Panel */}
-                <div className="space-y-4">
-                    <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider">{t('common.tools')}</h4>
-                    <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
-                        {TOOLS.map((tool) => (
-                            <button
-                                key={tool.id}
-                                onClick={() => setSelectedTool(tool.id as ConditionType)}
-                                className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${selectedTool === tool.id
-                                    ? 'border-primary-500 bg-primary-50 text-primary-700 ring-1 ring-primary-500'
-                                    : 'border-transparent hover:bg-gray-50 text-gray-600'
-                                    }`}
-                            >
-                                <tool.icon className="w-5 h-5" style={{ color: tool.id === selectedTool ? undefined : tool.color }} />
-                                <span className="font-semibold text-sm">{tool.label}</span>
-                            </button>
-                        ))}
-                    </div>
+                {['ADMIN', 'DENTIST', 'HYGIENIST'].includes(user?.role as string) && (
+                    <div className="space-y-4">
+                        <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider">{t('common.tools')}</h4>
+                        <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
+                            {TOOLS.map((tool) => (
+                                <button
+                                    key={tool.id}
+                                    onClick={() => setSelectedTool(tool.id as ConditionType)}
+                                    className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${selectedTool === tool.id
+                                        ? 'border-primary-500 bg-primary-50 text-primary-700 ring-1 ring-primary-500'
+                                        : 'border-transparent hover:bg-gray-50 text-gray-600'
+                                        }`}
+                                >
+                                    <tool.icon className="w-5 h-5" style={{ color: tool.id === selectedTool ? undefined : tool.color }} />
+                                    <span className="font-semibold text-sm">{tool.label}</span>
+                                </button>
+                            ))}
+                        </div>
 
-                    <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl text-xs text-blue-600 dark:text-blue-400">
-                        <p className="font-bold mb-1">{t('odontogram.how_to_use')}:</p>
-                        <ul className="list-disc pl-4 space-y-1">
-                            <li>{t('odontogram.instruction_1')}</li>
-                            <li>{t('odontogram.instruction_2')}</li>
-                            <li>{t('odontogram.instruction_3')}</li>
-                        </ul>
+                        <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl text-xs text-blue-600 dark:text-blue-400">
+                            <p className="font-bold mb-1">{t('odontogram.how_to_use')}:</p>
+                            <ul className="list-disc pl-4 space-y-1">
+                                <li>{t('odontogram.instruction_1')}</li>
+                                <li>{t('odontogram.instruction_2')}</li>
+                                <li>{t('odontogram.instruction_3')}</li>
+                            </ul>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Chart Area */}
-                <div className="lg:col-span-3 bg-white dark:bg-gray-800/50 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 flex justify-center overflow-x-auto">
+                <div className={`${['ADMIN', 'DENTIST', 'HYGIENIST'].includes(user?.role as string) ? 'lg:col-span-3' : ''} bg-white dark:bg-gray-800/50 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 flex justify-center overflow-x-auto`}>
                     <OdontogramGrid
                         conditions={conditions}
-                        onToothClick={handleToothClick}
+                        onToothClick={['ADMIN', 'DENTIST', 'HYGIENIST'].includes(user?.role as string) ? handleToothClick : () => { }}
                         isChild={isChild}
                     />
                 </div>

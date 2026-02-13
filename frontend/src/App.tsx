@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { UserRole } from './types';
 import { useAuthStore } from './stores';
 import MainLayout from './components/layout/MainLayout';
 import LoginPage from './features/auth/LoginPage';
@@ -12,10 +13,14 @@ import InventoryPage from './features/inventory/InventoryPage';
 import SettingsPage from './features/settings/SettingsPage';
 import PrescriptionsPage from './features/prescriptions/PrescriptionsPage';
 import NotificationsPage from './features/notifications/NotificationsPage';
+import StaffPage from './features/staff/StaffPage';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-    const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: UserRole[] }) {
+    const { isAuthenticated, user } = useAuthStore();
     if (!isAuthenticated) return <Navigate to="/login" replace />;
+    if (allowedRoles && user && !allowedRoles.includes(user.role as UserRole)) {
+        return <Navigate to="/dashboard" replace />;
+    }
     return <>{children}</>;
 }
 
@@ -35,10 +40,32 @@ export default function App() {
                                 <Route path="/patients/:id" element={<PatientDetailPage />} />
                                 <Route path="/appointments" element={<AppointmentsPage />} />
                                 <Route path="/treatments" element={<TreatmentsPage />} />
-                                <Route path="/billing" element={<BillingPage />} />
-                                <Route path="/inventory" element={<InventoryPage />} />
+                                <Route
+                                    path="/billing"
+                                    element={
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'DENTIST', 'RECEPTIONIST']}>
+                                            <BillingPage />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/inventory"
+                                    element={
+                                        <ProtectedRoute allowedRoles={['ADMIN', 'DENTIST', 'HYGIENIST', 'RECEPTIONIST']}>
+                                            <InventoryPage />
+                                        </ProtectedRoute>
+                                    }
+                                />
                                 <Route path="/prescriptions" element={<PrescriptionsPage />} />
                                 <Route path="/notifications" element={<NotificationsPage />} />
+                                <Route
+                                    path="/staff"
+                                    element={
+                                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                                            <StaffPage />
+                                        </ProtectedRoute>
+                                    }
+                                />
                                 <Route path="/settings" element={<SettingsPage />} />
                             </Routes>
                         </MainLayout>

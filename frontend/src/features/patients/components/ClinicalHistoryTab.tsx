@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Heart, AlertTriangle, Plus, X, Activity } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '../../../stores';
 import { patientsApi } from '../../../api';
 import type { Patient } from '../../../types';
 
@@ -13,6 +14,7 @@ interface ClinicalHistoryTabProps {
 export default function ClinicalHistoryTab({ patient }: ClinicalHistoryTabProps) {
     const { t } = useTranslation();
     const queryClient = useQueryClient();
+    const { user } = useAuthStore();
     const [showConditionForm, setShowConditionForm] = useState(false);
     const [showAllergyForm, setShowAllergyForm] = useState(false);
 
@@ -47,9 +49,11 @@ export default function ClinicalHistoryTab({ patient }: ClinicalHistoryTabProps)
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                         <Heart className="w-5 h-5 text-rose-500" /> {t('patients.medical_conditions')}
                     </h3>
-                    <button onClick={() => setShowConditionForm(true)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-primary-600">
-                        <Plus className="w-5 h-5" />
-                    </button>
+                    {['ADMIN', 'DENTIST', 'HYGIENIST'].includes(user?.role as string) && (
+                        <button onClick={() => setShowConditionForm(true)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-primary-600">
+                            <Plus className="w-5 h-5" />
+                        </button>
+                    )}
                 </div>
 
                 {showConditionForm && (
@@ -93,9 +97,11 @@ export default function ClinicalHistoryTab({ patient }: ClinicalHistoryTabProps)
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                         <AlertTriangle className="w-5 h-5 text-amber-500" /> {t('patients.allergies')}
                     </h3>
-                    <button onClick={() => setShowAllergyForm(true)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-primary-600">
-                        <Plus className="w-5 h-5" />
-                    </button>
+                    {['ADMIN', 'DENTIST', 'HYGIENIST'].includes(user?.role as string) && (
+                        <button onClick={() => setShowAllergyForm(true)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-primary-600">
+                            <Plus className="w-5 h-5" />
+                        </button>
+                    )}
                 </div>
 
                 {showAllergyForm && (

@@ -9,6 +9,8 @@ import toast from 'react-hot-toast';
 import CreateInvoiceModal from '../../billing/components/CreateInvoiceModal';
 import RecordPaymentModal from '../../billing/components/RecordPaymentModal';
 import { Menu, Transition } from '@headlessui/react';
+import { useAuthStore } from '../../../stores';
+import { UserRole } from '../../../types';
 
 interface BillingTabProps {
     patientId: string;
@@ -24,6 +26,7 @@ const STATUS_MAP = {
 export default function BillingTab({ patientId }: BillingTabProps) {
     const { t } = useTranslation();
     const queryClient = useQueryClient();
+    const { user } = useAuthStore();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -77,12 +80,14 @@ export default function BillingTab({ patientId }: BillingTabProps) {
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('billing.invoicing_history')}</h3>
                     <div className="flex gap-2">
-                        <button
-                            className="btn-primary py-1.5 px-4 text-xs flex items-center gap-2"
-                            onClick={() => setIsCreateModalOpen(true)}
-                        >
-                            <Receipt className="w-4 h-4" /> {t('billing.new_invoice')}
-                        </button>
+                        {['ADMIN', 'RECEPTIONIST'].includes(user?.role as string) && (
+                            <button
+                                className="btn-primary py-1.5 px-4 text-xs flex items-center gap-2"
+                                onClick={() => setIsCreateModalOpen(true)}
+                            >
+                                <Receipt className="w-4 h-4" /> {t('billing.new_invoice')}
+                            </button>
+                        )}
                         <button className="btn-secondary py-1.5 text-xs">{t('billing.download_all')}</button>
                     </div>
                 </div>
@@ -136,50 +141,52 @@ export default function BillingTab({ patientId }: BillingTabProps) {
                                             </td>
                                             <td className="py-4 text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <Menu as="div" className="relative inline-block text-left">
-                                                        <Menu.Button className="p-2 text-gray-400 hover:text-primary-600 transition-colors rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
-                                                            <MoreVertical className="w-4 h-4" />
-                                                        </Menu.Button>
-                                                        <Transition
-                                                            as={Fragment}
-                                                            enter="transition ease-out duration-100"
-                                                            enterFrom="transform opacity-0 scale-95"
-                                                            enterTo="transform opacity-100 scale-100"
-                                                            leave="transition ease-in duration-75"
-                                                            leaveFrom="transform opacity-100 scale-100"
-                                                            leaveTo="transform opacity-0 scale-95"
-                                                        >
-                                                            <Menu.Items className="absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl bg-white dark:bg-gray-800 shadow-xl border border-gray-100 dark:border-gray-700 focus:outline-none">
-                                                                <div className="p-1">
-                                                                    <Menu.Item>
-                                                                        {({ active }) => (
-                                                                            <button
-                                                                                onClick={() => handleRecordPayment(inv)}
-                                                                                className={`${active ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'
-                                                                                    } group flex w-full items-center rounded-lg px-3 py-2 text-xs font-black uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 mb-1 pb-2`}
-                                                                            >
-                                                                                <DollarSign className="w-4 h-4 mr-2 text-green-500" />
-                                                                                {t('billing.record_payment')}
-                                                                            </button>
-                                                                        )}
-                                                                    </Menu.Item>
-                                                                    {['PENDING', 'PAID', 'OVERDUE', 'CANCELLED'].map((status) => (
-                                                                        <Menu.Item key={status}>
+                                                    {['ADMIN', 'RECEPTIONIST'].includes(user?.role as string) && (
+                                                        <Menu as="div" className="relative inline-block text-left">
+                                                            <Menu.Button className="p-2 text-gray-400 hover:text-primary-600 transition-colors rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+                                                                <MoreVertical className="w-4 h-4" />
+                                                            </Menu.Button>
+                                                            <Transition
+                                                                as={Fragment}
+                                                                enter="transition ease-out duration-100"
+                                                                enterFrom="transform opacity-0 scale-95"
+                                                                enterTo="transform opacity-100 scale-100"
+                                                                leave="transition ease-in duration-75"
+                                                                leaveFrom="transform opacity-100 scale-100"
+                                                                leaveTo="transform opacity-0 scale-95"
+                                                            >
+                                                                <Menu.Items className="absolute right-0 z-10 mt-2 w-40 origin-top-right rounded-xl bg-white dark:bg-gray-800 shadow-xl border border-gray-100 dark:border-gray-700 focus:outline-none">
+                                                                    <div className="p-1">
+                                                                        <Menu.Item>
                                                                             {({ active }) => (
                                                                                 <button
-                                                                                    onClick={() => updateStatusMutation.mutate({ id: inv.id, status })}
+                                                                                    onClick={() => handleRecordPayment(inv)}
                                                                                     className={`${active ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'
-                                                                                        } group flex w-full items-center rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wider`}
+                                                                                        } group flex w-full items-center rounded-lg px-3 py-2 text-xs font-black uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 mb-1 pb-2`}
                                                                                 >
-                                                                                    {t(`billing.${status.toLowerCase()}`)}
+                                                                                    <DollarSign className="w-4 h-4 mr-2 text-green-500" />
+                                                                                    {t('billing.record_payment')}
                                                                                 </button>
                                                                             )}
                                                                         </Menu.Item>
-                                                                    ))}
-                                                                </div>
-                                                            </Menu.Items>
-                                                        </Transition>
-                                                    </Menu>
+                                                                        {['PENDING', 'PAID', 'OVERDUE', 'CANCELLED'].map((status) => (
+                                                                            <Menu.Item key={status}>
+                                                                                {({ active }) => (
+                                                                                    <button
+                                                                                        onClick={() => updateStatusMutation.mutate({ id: inv.id, status })}
+                                                                                        className={`${active ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'
+                                                                                            } group flex w-full items-center rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wider`}
+                                                                                    >
+                                                                                        {t(`billing.${status.toLowerCase()}`)}
+                                                                                    </button>
+                                                                                )}
+                                                                            </Menu.Item>
+                                                                        ))}
+                                                                    </div>
+                                                                </Menu.Items>
+                                                            </Transition>
+                                                        </Menu>
+                                                    )}
                                                     <button className="p-2 text-gray-400 hover:text-primary-600 transition-colors rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800" title={t('billing.download_pdf') || 'Download PDF'}>
                                                         <Download className="w-4 h-4" />
                                                     </button>

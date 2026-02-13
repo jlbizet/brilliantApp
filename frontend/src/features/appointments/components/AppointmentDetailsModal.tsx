@@ -3,7 +3,8 @@ import { Dialog, Transition } from '@headlessui/react';
 import { useTranslation } from 'react-i18next';
 import { X, Calendar, Clock, User, FileText, CheckCircle, AlertCircle, XCircle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Appointment } from '../../../types';
+import { Appointment, UserRole } from '../../../types';
+import { useAuthStore } from '../../../stores';
 
 interface AppointmentDetailsModalProps {
     isOpen: boolean;
@@ -16,6 +17,7 @@ interface AppointmentDetailsModalProps {
 
 export default function AppointmentDetailsModal({ isOpen, onClose, appointment, onStatusChange, onUpdate, onDelete }: AppointmentDetailsModalProps) {
     const { t } = useTranslation();
+    const { user } = useAuthStore();
     const [isEditing, setIsEditing] = useState(false);
     const [editData, setEditData] = useState<any>(appointment);
 
@@ -71,16 +73,18 @@ export default function AppointmentDetailsModal({ isOpen, onClose, appointment, 
                                         </Dialog.Title>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button onClick={() => {
-                                            if (isEditing) {
-                                                onUpdate(appointment.id, editData);
-                                                setIsEditing(false);
-                                            } else {
-                                                setIsEditing(true);
-                                            }
-                                        }} className="text-primary-500 hover:text-primary-600 font-bold text-sm px-2">
-                                            {isEditing ? t('common.save') : t('common.edit')}
-                                        </button>
+                                        {['ADMIN', 'DENTIST', 'RECEPTIONIST'].includes(user?.role as string) && (
+                                            <button onClick={() => {
+                                                if (isEditing) {
+                                                    onUpdate(appointment.id, editData);
+                                                    setIsEditing(false);
+                                                } else {
+                                                    setIsEditing(true);
+                                                }
+                                            }} className="text-primary-500 hover:text-primary-600 font-bold text-sm px-2">
+                                                {isEditing ? t('common.save') : t('common.edit')}
+                                            </button>
+                                        )}
                                         <button onClick={() => { setIsEditing(false); onClose(); }} className="text-gray-400 hover:text-gray-500 transition-colors">
                                             <X className="w-5 h-5" />
                                         </button>
@@ -196,15 +200,17 @@ export default function AppointmentDetailsModal({ isOpen, onClose, appointment, 
                                     </div>
 
                                     {/* Action Footer */}
-                                    <div className="flex justify-end pt-4 border-t border-gray-100 dark:border-gray-800">
-                                        <button
-                                            onClick={() => onDelete(appointment.id)}
-                                            className="text-red-500 hover:text-red-700 text-sm font-bold flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                            {t('common.delete')} {t('common.appointment')}
-                                        </button>
-                                    </div>
+                                    {['ADMIN'].includes(user?.role as string) && (
+                                        <div className="flex justify-end pt-4 border-t border-gray-100 dark:border-gray-800">
+                                            <button
+                                                onClick={() => onDelete(appointment.id)}
+                                                className="text-red-500 hover:text-red-700 text-sm font-bold flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                                {t('common.delete')} {t('common.appointment')}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </Dialog.Panel>
                         </Transition.Child>

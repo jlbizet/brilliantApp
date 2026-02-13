@@ -3,10 +3,13 @@ import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { InventoryService, CreateInventoryItemDto, UpdateInventoryItemDto } from './inventory.service';
 import { PaginationDto } from '../../common/dto';
+import { Roles } from '../../common/decorators';
+import { RolesGuard } from '../../common/guards';
+import { UserRole } from '@prisma/client';
 
 @ApiTags('Inventory')
 @Controller('inventory')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @ApiBearerAuth()
 export class InventoryController {
     constructor(private readonly inventoryService: InventoryService) { }
@@ -24,14 +27,17 @@ export class InventoryController {
     findOne(@Param('id') id: string) { return this.inventoryService.findOne(id); }
 
     @Post()
+    @Roles(UserRole.ADMIN, UserRole.RECEPTIONIST)
     @ApiOperation({ summary: 'Add inventory item' })
     create(@Body() dto: CreateInventoryItemDto) { return this.inventoryService.create(dto); }
 
     @Patch(':id')
+    @Roles(UserRole.ADMIN, UserRole.RECEPTIONIST)
     @ApiOperation({ summary: 'Update inventory item' })
     update(@Param('id') id: string, @Body() dto: UpdateInventoryItemDto) { return this.inventoryService.update(id, dto); }
 
     @Delete(':id')
+    @Roles(UserRole.ADMIN)
     @ApiOperation({ summary: 'Delete inventory item' })
     remove(@Param('id') id: string) { return this.inventoryService.remove(id); }
 }

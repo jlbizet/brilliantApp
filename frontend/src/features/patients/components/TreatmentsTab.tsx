@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Plus, Check, X, Stethoscope, AlertCircle, CheckCircle, Clock, ChevronDown, Trash2 } from 'lucide-react';
 import { treatmentsApi } from '../../../api';
+import { useAuthStore } from '../../../stores';
 import toast from 'react-hot-toast';
 import type { TreatmentPlan, Treatment } from '../../../types';
 import { Menu } from '@headlessui/react';
@@ -21,6 +22,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function TreatmentsTab({ patientId }: TreatmentsTabProps) {
     const { t } = useTranslation();
     const queryClient = useQueryClient();
+    const { user } = useAuthStore();
     const [showForm, setShowForm] = useState(false);
     const [addingProcedureTo, setAddingProcedureTo] = useState<string | null>(null);
     const [formData, setFormData] = useState({
@@ -110,12 +112,14 @@ export default function TreatmentsTab({ patientId }: TreatmentsTabProps) {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <h3 className="font-bold text-gray-900 dark:text-white">{t('treatments.title')}</h3>
-                <button
-                    onClick={() => setShowForm(!showForm)}
-                    className="btn-primary py-1.5 px-3 text-xs flex items-center gap-2"
-                >
-                    <Plus className="w-4 h-4" /> {t('treatments.new_plan')}
-                </button>
+                {['ADMIN', 'DENTIST', 'HYGIENIST'].includes(user?.role as string) && (
+                    <button
+                        onClick={() => setShowForm(!showForm)}
+                        className="btn-primary py-1.5 px-3 text-xs flex items-center gap-2"
+                    >
+                        <Plus className="w-4 h-4" /> {t('treatments.new_plan')}
+                    </button>
+                )}
             </div>
 
             {showForm && (
@@ -184,26 +188,32 @@ export default function TreatmentsTab({ patientId }: TreatmentsTabProps) {
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <Menu as="div" className="relative inline-block text-left mb-1">
-                                        <Menu.Button className={`badge flex items-center gap-1 cursor-pointer ${STATUS_COLORS[plan.status]} hover:opacity-80`}>
+                                    {['ADMIN', 'DENTIST', 'HYGIENIST'].includes(user?.role as string) ? (
+                                        <Menu as="div" className="relative inline-block text-left mb-1">
+                                            <Menu.Button className={`badge flex items-center gap-1 cursor-pointer ${STATUS_COLORS[plan.status]} hover:opacity-80`}>
+                                                {t(`treatments.${plan.status.toLowerCase()}`)}
+                                                <ChevronDown className="w-3 h-3" />
+                                            </Menu.Button>
+                                            <Menu.Items className="absolute right-0 mt-1 w-36 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                                                {['PLANNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].map((status) => (
+                                                    <Menu.Item key={status}>
+                                                        {({ active }) => (
+                                                            <button
+                                                                onClick={() => updatePlanMutation.mutate({ id: plan.id, status })}
+                                                                className={`${active ? 'bg-gray-100 dark:bg-gray-700' : ''} group flex w-full items-center px-4 py-2 text-xs text-gray-900 dark:text-white`}
+                                                            >
+                                                                {t(`treatments.${status.toLowerCase()}`)}
+                                                            </button>
+                                                        )}
+                                                    </Menu.Item>
+                                                ))}
+                                            </Menu.Items>
+                                        </Menu>
+                                    ) : (
+                                        <div className={`badge mb-1 ${STATUS_COLORS[plan.status]}`}>
                                             {t(`treatments.${plan.status.toLowerCase()}`)}
-                                            <ChevronDown className="w-3 h-3" />
-                                        </Menu.Button>
-                                        <Menu.Items className="absolute right-0 mt-1 w-36 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
-                                            {['PLANNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].map((status) => (
-                                                <Menu.Item key={status}>
-                                                    {({ active }) => (
-                                                        <button
-                                                            onClick={() => updatePlanMutation.mutate({ id: plan.id, status })}
-                                                            className={`${active ? 'bg-gray-100 dark:bg-gray-700' : ''} group flex w-full items-center px-4 py-2 text-xs text-gray-900 dark:text-white`}
-                                                        >
-                                                            {t(`treatments.${status.toLowerCase()}`)}
-                                                        </button>
-                                                    )}
-                                                </Menu.Item>
-                                            ))}
-                                        </Menu.Items>
-                                    </Menu>
+                                        </div>
+                                    )}
                                     <p className="font-bold text-gray-900 dark:text-white">
                                         ${Number(plan.estimatedCost).toLocaleString()}
                                     </p>
@@ -231,16 +241,22 @@ export default function TreatmentsTab({ patientId }: TreatmentsTabProps) {
                                 {plan.treatments && plan.treatments.length > 0 && plan.treatments.map(t_item => (
                                     <div key={t_item.id} className="flex items-center justify-between text-xs py-2 px-2 border-b border-gray-100 dark:border-gray-700 last:border-0 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded transition-colors">
                                         <div className="flex items-center gap-3 text-gray-700 dark:text-gray-300">
-                                            <button
-                                                onClick={() => updateTreatmentMutation.mutate({
-                                                    id: t_item.id,
-                                                    status: t_item.status === 'COMPLETED' ? 'PLANNED' : 'COMPLETED'
-                                                })}
-                                                className="hover:scale-110 transition-transform"
-                                                title={t('treatments.toggle_completion')}
-                                            >
-                                                {STATUS_ICONS[t_item.status]}
-                                            </button>
+                                            {['ADMIN', 'DENTIST', 'HYGIENIST'].includes(user?.role as string) ? (
+                                                <button
+                                                    onClick={() => updateTreatmentMutation.mutate({
+                                                        id: t_item.id,
+                                                        status: t_item.status === 'COMPLETED' ? 'PLANNED' : 'COMPLETED'
+                                                    })}
+                                                    className="hover:scale-110 transition-transform"
+                                                    title={t('treatments.toggle_completion')}
+                                                >
+                                                    {STATUS_ICONS[t_item.status]}
+                                                </button>
+                                            ) : (
+                                                <div className="opacity-80">
+                                                    {STATUS_ICONS[t_item.status]}
+                                                </div>
+                                            )}
                                             <div className="flex flex-col">
                                                 <span className={`${t_item.status === 'COMPLETED' ? 'line-through text-gray-400' : ''}`}>
                                                     {t_item.name}
@@ -255,56 +271,60 @@ export default function TreatmentsTab({ patientId }: TreatmentsTabProps) {
                                 ))}
 
                                 {/* Add Procedure Button/Form */}
-                                {addingProcedureTo === plan.id ? (
-                                    <form onSubmit={(e) => handleAddProcedure(e, plan.id)} className="mt-2 p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 animate-fade-in">
-                                        <div className="grid grid-cols-3 gap-2 mb-2">
-                                            <input
-                                                className="input-field text-xs py-1"
-                                                placeholder={t('treatments.procedure_name_placeholder')}
-                                                value={procedureData.name}
-                                                onChange={e => setProcedureData({ ...procedureData, name: e.target.value })}
-                                                required
-                                                autoFocus
-                                            />
-                                            <input
-                                                type="number"
-                                                className="input-field text-xs py-1"
-                                                placeholder={t('treatments.cost_placeholder')}
-                                                value={procedureData.cost}
-                                                onChange={e => setProcedureData({ ...procedureData, cost: e.target.value })}
-                                                required
-                                            />
-                                            <input
-                                                className="input-field text-xs py-1"
-                                                placeholder={t('treatments.tooth_opt_placeholder')}
-                                                value={procedureData.tooth}
-                                                onChange={e => setProcedureData({ ...procedureData, tooth: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="flex justify-end gap-2">
+                                {['ADMIN', 'DENTIST', 'HYGIENIST'].includes(user?.role as string) && (
+                                    <>
+                                        {addingProcedureTo === plan.id ? (
+                                            <form onSubmit={(e) => handleAddProcedure(e, plan.id)} className="mt-2 p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 animate-fade-in">
+                                                <div className="grid grid-cols-3 gap-2 mb-2">
+                                                    <input
+                                                        className="input-field text-xs py-1"
+                                                        placeholder={t('treatments.procedure_name_placeholder')}
+                                                        value={procedureData.name}
+                                                        onChange={e => setProcedureData({ ...procedureData, name: e.target.value })}
+                                                        required
+                                                        autoFocus
+                                                    />
+                                                    <input
+                                                        type="number"
+                                                        className="input-field text-xs py-1"
+                                                        placeholder={t('treatments.cost_placeholder')}
+                                                        value={procedureData.cost}
+                                                        onChange={e => setProcedureData({ ...procedureData, cost: e.target.value })}
+                                                        required
+                                                    />
+                                                    <input
+                                                        className="input-field text-xs py-1"
+                                                        placeholder={t('treatments.tooth_opt_placeholder')}
+                                                        value={procedureData.tooth}
+                                                        onChange={e => setProcedureData({ ...procedureData, tooth: e.target.value })}
+                                                    />
+                                                </div>
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setAddingProcedureTo(null)}
+                                                        className="text-xs text-gray-500 hover:text-gray-700"
+                                                    >
+                                                        {t('common.cancel')}
+                                                    </button>
+                                                    <button
+                                                        type="submit"
+                                                        disabled={createTreatmentMutation.isPending}
+                                                        className="btn-primary py-1 px-2 text-xs"
+                                                    >
+                                                        {t('common.add')}
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        ) : (
                                             <button
-                                                type="button"
-                                                onClick={() => setAddingProcedureTo(null)}
-                                                className="text-xs text-gray-500 hover:text-gray-700"
+                                                onClick={() => setAddingProcedureTo(plan.id)}
+                                                className="w-full py-1 text-center text-xs text-primary-600 hover:text-primary-700 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded border border-dashed border-primary-200 dark:border-primary-800 mt-2 transition-colors"
                                             >
-                                                {t('common.cancel')}
+                                                + {t('treatments.add_procedure')}
                                             </button>
-                                            <button
-                                                type="submit"
-                                                disabled={createTreatmentMutation.isPending}
-                                                className="btn-primary py-1 px-2 text-xs"
-                                            >
-                                                {t('common.add')}
-                                            </button>
-                                        </div>
-                                    </form>
-                                ) : (
-                                    <button
-                                        onClick={() => setAddingProcedureTo(plan.id)}
-                                        className="w-full py-1 text-center text-xs text-primary-600 hover:text-primary-700 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded border border-dashed border-primary-200 dark:border-primary-800 mt-2 transition-colors"
-                                    >
-                                        + {t('treatments.add_procedure')}
-                                    </button>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>
