@@ -8,7 +8,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     const sidebarOpen = useUIStore((s) => s.sidebarOpen);
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900">
             <Sidebar />
             <div
                 className="transition-all duration-300"

@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import { appointmentsApi, usersApi, patientsApi, waitlistApi } from '../../api';
 import type { Appointment } from '../../types';
 import AppointmentDetailsModal from './components/AppointmentDetailsModal';
+import { DatePicker, TimePicker } from '../../components/ui';
 
 const STATUS_COLORS: Record<string, string> = {
     SCHEDULED: '#338dfc', CONFIRMED: '#22c55e', IN_PROGRESS: '#f59e0b',
@@ -158,12 +159,9 @@ export default function AppointmentsPage() {
                         <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="label">{t('common.date')} *</label>
-                                <input
-                                    type="date"
-                                    className="input-field"
+                                <DatePicker
                                     value={formData.startTime ? formData.startTime.split('T')[0] : ''}
-                                    onChange={e => {
-                                        const date = e.target.value;
+                                    onChange={date => {
                                         if (!date) return;
                                         const time = formData.startTime ? formData.startTime.split('T')[1]?.slice(0, 5) : '09:00';
                                         const startStr = `${date}T${time}`;
@@ -175,17 +173,13 @@ export default function AppointmentsPage() {
                                             endTime: formatLocalDate(end)
                                         });
                                     }}
-                                    required
                                 />
                             </div>
                             <div>
                                 <label className="label">{t('common.time')} *</label>
-                                <input
-                                    type="time"
-                                    className="input-field"
+                                <TimePicker
                                     value={formData.startTime ? formData.startTime.split('T')[1]?.slice(0, 5) : ''}
-                                    onChange={e => {
-                                        const time = e.target.value;
+                                    onChange={time => {
                                         if (!time) return;
                                         const date = formData.startTime ? formData.startTime.split('T')[0] : new Date().toISOString().split('T')[0];
                                         const startStr = `${date}T${time}`;
@@ -202,7 +196,7 @@ export default function AppointmentsPage() {
                                             endTime: formatLocalDate(end)
                                         });
                                     }}
-                                    required
+                                    minuteStep={15}
                                 />
                             </div>
                         </div>
@@ -252,7 +246,10 @@ export default function AppointmentsPage() {
                                     </div>
                                     <div>
                                         <label className="label">{t('appointments.until')}</label>
-                                        <input type="date" className="input-field" value={formData.recurringEndDate} onChange={e => setFormData({ ...formData, recurringEndDate: e.target.value })} />
+                                        <DatePicker
+                                            value={formData.recurringEndDate}
+                                            onChange={date => setFormData({ ...formData, recurringEndDate: date })}
+                                        />
                                     </div>
                                 </div>
                             )}

@@ -125,13 +125,15 @@ export default function PrescriptionsPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('prescriptions.title') || 'Prescriptions'}</h1>
+                    <h1 className="text-2xl font-bold bg-gradient-to-r from-dental-teal to-dental-sky bg-clip-text text-transparent">
+                        {t('prescriptions.title') || 'Prescriptions'}
+                    </h1>
                     <p className="text-gray-500 text-sm mt-1">
                         {t('prescriptions.total_count', { count: filteredPrescriptions?.length || 0 }) || `${filteredPrescriptions?.length || 0} prescriptions`}
                     </p>
                 </div>
                 {['ADMIN', 'DENTIST'].includes(user?.role as string) && (
-                    <button onClick={() => setShowForm(!showForm)} className="btn-primary">
+                    <button onClick={() => setShowForm(!showForm)} className="btn-primary shadow-lg shadow-dental-teal/30 hover:shadow-xl hover:shadow-dental-teal/40 transition-all duration-300">
                         <Plus className="w-4 h-4" /> {editingId ? t('prescriptions.cancel_edit') || 'Cancel Edit' : t('prescriptions.add') || 'Add Prescription'}
                     </button>
                 )}
@@ -139,16 +141,19 @@ export default function PrescriptionsPage() {
 
             {/* Create/Edit Form */}
             {showForm && (
-                <div className="card animate-slide-up">
-                    <h3 className="font-bold text-gray-900 dark:text-white mb-4">
+                <div className="card animate-slide-up border-l-4 border-l-dental-teal relative overflow-hidden">
+                    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-dental-teal via-dental-sky to-dental-teal opacity-50" />
+                    <h3 className="font-bold text-xl text-gray-900 dark:text-white mb-6">
                         {editingId ? t('prescriptions.edit_title') || 'Edit Prescription' : t('prescriptions.new_title') || 'New Prescription'}
                     </h3>
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="md:col-span-2">
-                                <label className="label">{t('prescriptions.patient')} *</label>
+                                <label className="label flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                    {t('prescriptions.patient')} <span className="text-red-500">*</span>
+                                </label>
                                 <select
-                                    className="input-field"
+                                    className="input-field mt-1.5 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 focus:ring-2 focus:ring-dental-teal/50 transition-all duration-200"
                                     value={formData.patientId}
                                     onChange={(e) => handlePatientSelect(e.target.value)}
                                     required
@@ -162,55 +167,68 @@ export default function PrescriptionsPage() {
                                     ))}
                                 </select>
                                 {selectedPatient && (
-                                    <p className="text-sm text-gray-500 mt-1">
-                                        {selectedPatient.firstName} {selectedPatient.lastName}
-                                    </p>
+                                    <div className="mt-2 p-2 bg-dental-teal/10 dark:bg-dental-teal/20 rounded-lg inline-flex items-center gap-2">
+                                        <div className="w-6 h-6 bg-gradient-to-br from-dental-teal to-dental-sky rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                            {selectedPatient.firstName[0]}{selectedPatient.lastName[0]}
+                                        </div>
+                                        <p className="text-sm font-medium text-dental-teal">
+                                            {selectedPatient.firstName} {selectedPatient.lastName}
+                                        </p>
+                                    </div>
                                 )}
                             </div>
-                            <div>
-                                <label className="label">{t('prescriptions.medication')} *</label>
+                            <div className="space-y-1">
+                                <label className="label flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                    {t('prescriptions.medication')} <span className="text-red-500">*</span>
+                                </label>
                                 <input
-                                    className="input-field"
+                                    className="input-field bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 focus:ring-2 focus:ring-dental-teal/50 transition-all duration-200"
                                     value={formData.medication}
                                     onChange={(e) => setFormData({ ...formData, medication: e.target.value })}
                                     placeholder="e.g., Amoxicillin"
                                     required
                                 />
                             </div>
-                            <div>
-                                <label className="label">{t('prescriptions.dosage')} *</label>
+                            <div className="space-y-1">
+                                <label className="label flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                    {t('prescriptions.dosage')} <span className="text-red-500">*</span>
+                                </label>
                                 <input
-                                    className="input-field"
+                                    className="input-field bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 focus:ring-2 focus:ring-dental-teal/50 transition-all duration-200"
                                     value={formData.dosage}
                                     onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
                                     placeholder="e.g., 500mg"
                                     required
                                 />
                             </div>
-                            <div>
-                                <label className="label">{t('prescriptions.frequency')} *</label>
+                            <div className="space-y-1">
+                                <label className="label flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                    {t('prescriptions.frequency')} <span className="text-red-500">*</span>
+                                </label>
                                 <input
-                                    className="input-field"
+                                    className="input-field bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 focus:ring-2 focus:ring-dental-teal/50 transition-all duration-200"
                                     value={formData.frequency}
                                     onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
                                     placeholder="e.g., 3 times daily"
                                     required
                                 />
                             </div>
-                            <div>
-                                <label className="label">{t('prescriptions.duration')} *</label>
+                            <div className="space-y-1">
+                                <label className="label flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                    {t('prescriptions.duration')} <span className="text-red-500">*</span>
+                                </label>
                                 <input
-                                    className="input-field"
+                                    className="input-field bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 focus:ring-2 focus:ring-dental-teal/50 transition-all duration-200"
                                     value={formData.duration}
                                     onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                                     placeholder="e.g., 7 days"
                                     required
                                 />
                             </div>
-                            <div className="md:col-span-2">
-                                <label className="label">{t('prescriptions.notes')}</label>
+                            <div className="md:col-span-2 space-y-1">
+                                <label className="label text-sm font-semibold text-gray-700 dark:text-gray-300">{t('prescriptions.notes')}</label>
                                 <textarea
-                                    className="input-field"
+                                    className="input-field bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 focus:ring-2 focus:ring-dental-teal/50 transition-all duration-200 resize-none"
                                     rows={3}
                                     value={formData.notes}
                                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -218,14 +236,14 @@ export default function PrescriptionsPage() {
                                 />
                             </div>
                         </div>
-                        <div className="flex gap-2 justify-end">
-                            <button type="button" onClick={resetForm} className="btn-secondary">
+                        <div className="flex gap-3 justify-end pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <button type="button" onClick={resetForm} className="btn-secondary hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                                 {t('common.cancel')}
                             </button>
                             <button
                                 type="submit"
                                 disabled={createMutation.isPending || updateMutation.isPending}
-                                className="btn-primary"
+                                className="btn-primary shadow-lg shadow-dental-teal/30 hover:shadow-xl hover:shadow-dental-teal/40 transition-all duration-300"
                             >
                                 {(createMutation.isPending || updateMutation.isPending)
                                     ? t('common.saving')
@@ -244,7 +262,7 @@ export default function PrescriptionsPage() {
                 <input
                     type="text"
                     placeholder={t('prescriptions.search_placeholder') || 'Search prescriptions or patients...'}
-                    className="input-field pl-10"
+                    className="input-field pl-10 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 focus:ring-2 focus:ring-dental-teal/30 transition-all duration-200 shadow-sm"
                     value={search}
                     onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 />
@@ -252,47 +270,56 @@ export default function PrescriptionsPage() {
 
             {/* Prescriptions List */}
             {isLoading ? (
-                <div className="card text-center py-12 text-gray-400">{t('prescriptions.loading') || 'Loading prescriptions...'}</div>
+                <div className="card text-center py-16 text-gray-400">
+                    <div className="animate-pulse flex flex-col items-center">
+                        <FileText className="w-12 h-12 mb-4 opacity-30" />
+                        {t('prescriptions.loading') || 'Loading prescriptions...'}
+                    </div>
+                </div>
             ) : (
                 <div className="space-y-4">
                     {paginatedPrescriptions?.map((prescription: Prescription) => (
-                        <div key={prescription.id} className="card hover:shadow-md transition-shadow">
+                        <div key={prescription.id} className="card hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 overflow-hidden group">
+                            <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-dental-teal via-dental-sky to-dental-teal opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                             <div className="flex items-start justify-between">
                                 <div className="flex-1">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <div className="w-10 h-10 bg-gradient-to-br from-dental-teal to-dental-sky rounded-xl flex items-center justify-center text-white">
-                                            <FileText className="w-5 h-5" />
+                                    <div className="flex items-center gap-4 mb-3">
+                                        <div className="w-12 h-12 bg-gradient-to-br from-dental-teal to-dental-sky rounded-xl flex items-center justify-center text-white shadow-lg shadow-dental-teal/25 group-hover:shadow-dental-teal/40 transition-shadow duration-300">
+                                            <FileText className="w-6 h-6" />
                                         </div>
                                         <div>
-                                            <h3 className="font-bold text-gray-900 dark:text-white">{prescription.medication}</h3>
-                                            <p className="text-sm text-gray-500">
+                                            <h3 className="font-bold text-lg text-gray-900 dark:text-white group-hover:text-dental-teal dark:group-hover:text-dental-sky transition-colors duration-200">{prescription.medication}</h3>
+                                            <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                <div className="w-5 h-5 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                                    {prescription.patient?.firstName[0]}{prescription.patient?.lastName[0]}
+                                                </div>
                                                 {prescription.patient?.firstName} {prescription.patient?.lastName}
-                                            </p>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
-                                        <div>
-                                            <p className="text-gray-500">{t('prescriptions.dosage')}</p>
-                                            <p className="font-medium text-gray-900 dark:text-white">{prescription.dosage}</p>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-800/50 dark:to-gray-900/50 rounded-xl">
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{t('prescriptions.dosage')}</p>
+                                            <p className="font-semibold text-gray-900 dark:text-white">{prescription.dosage}</p>
                                         </div>
-                                        <div>
-                                            <p className="text-gray-500">{t('prescriptions.frequency')}</p>
-                                            <p className="font-medium text-gray-900 dark:text-white">{prescription.frequency}</p>
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{t('prescriptions.frequency')}</p>
+                                            <p className="font-semibold text-gray-900 dark:text-white">{prescription.frequency}</p>
                                         </div>
-                                        <div>
-                                            <p className="text-gray-500">{t('prescriptions.duration')}</p>
-                                            <p className="font-medium text-gray-900 dark:text-white">{prescription.duration}</p>
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{t('prescriptions.duration')}</p>
+                                            <p className="font-semibold text-gray-900 dark:text-white">{prescription.duration}</p>
                                         </div>
-                                        <div>
-                                            <p className="text-gray-500">{t('prescriptions.prescribed')}</p>
-                                            <p className="font-medium text-gray-900 dark:text-white">
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{t('prescriptions.prescribed')}</p>
+                                            <p className="font-semibold text-gray-900 dark:text-white">
                                                 {new Date(prescription.prescribedAt).toLocaleDateString()}
                                             </p>
                                         </div>
                                     </div>
                                     {prescription.notes && (
-                                        <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">{prescription.notes}</p>
+                                        <div className="mt-4 p-4 bg-gradient-to-r from-amber-50 to-amber-100/30 dark:from-amber-900/20 dark:to-amber-900/10 rounded-xl border-l-4 border-amber-400">
+                                            <p className="text-sm text-gray-700 dark:text-gray-300 italic">{prescription.notes}</p>
                                         </div>
                                     )}
                                 </div>
@@ -300,7 +327,8 @@ export default function PrescriptionsPage() {
                                     <div className="flex gap-2 ml-4">
                                         <button
                                             onClick={() => handleEdit(prescription)}
-                                            className="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                            className="p-2.5 text-gray-500 hover:text-dental-teal hover:bg-dental-teal/10 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
+                                            title="Edit"
                                         >
                                             <Edit className="w-4 h-4" />
                                         </button>
@@ -310,7 +338,8 @@ export default function PrescriptionsPage() {
                                                     deleteMutation.mutate(prescription.id);
                                                 }
                                             }}
-                                            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                            className="p-2.5 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
+                                            title="Delete"
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </button>
@@ -320,8 +349,11 @@ export default function PrescriptionsPage() {
                         </div>
                     ))}
                     {(!paginatedPrescriptions || paginatedPrescriptions.length === 0) && (
-                        <div className="card text-center py-12 text-gray-400">
-                            {t('prescriptions.no_prescriptions') || 'No prescriptions found'}
+                        <div className="card text-center py-16 text-gray-400">
+                            <div className="w-20 h-20 bg-gradient-to-br from-dental-teal/20 to-dental-sky/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <FileText className="w-10 h-10 text-dental-teal/50" />
+                            </div>
+                            <p className="text-lg font-medium text-gray-600 dark:text-gray-400">{t('prescriptions.no_prescriptions') || 'No prescriptions found'}</p>
                         </div>
                     )}
                 </div>
@@ -329,8 +361,8 @@ export default function PrescriptionsPage() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-                <div className="flex items-center justify-between">
-                    <p className="text-sm text-gray-500">
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl shadow-sm">
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
                         {t('common.pagination_info', { page, totalPages, total: filteredPrescriptions?.length }) ||
                             `Page ${page} of ${totalPages} (${filteredPrescriptions?.length} total)`}
                     </p>
@@ -338,14 +370,30 @@ export default function PrescriptionsPage() {
                         <button
                             onClick={() => setPage((p) => Math.max(1, p - 1))}
                             disabled={page === 1}
-                            className="btn-secondary !py-2 !px-3"
+                            className="p-2.5 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-dental-teal hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
                         >
                             <ChevronLeft className="w-4 h-4" />
                         </button>
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            const pageNum = i + 1;
+                            return (
+                                <button
+                                    key={pageNum}
+                                    onClick={() => setPage(pageNum)}
+                                    className={`w-10 h-10 rounded-xl font-medium transition-all duration-200 ${
+                                        page === pageNum
+                                            ? 'bg-dental-teal text-white shadow-lg shadow-dental-teal/30'
+                                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                    }`}
+                                >
+                                    {pageNum}
+                                </button>
+                            );
+                        })}
                         <button
                             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                             disabled={page >= totalPages}
-                            className="btn-secondary !py-2 !px-3"
+                            className="p-2.5 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-dental-teal hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
                         >
                             <ChevronRight className="w-4 h-4" />
                         </button>

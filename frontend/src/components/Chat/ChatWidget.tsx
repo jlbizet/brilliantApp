@@ -89,9 +89,10 @@ export default function ChatWidget() {
             {/* Toggle Button */}
             <button
                 onClick={toggleChat}
-                className="w-14 h-14 bg-primary-600 text-white rounded-full shadow-xl shadow-primary-600/30 flex items-center justify-center hover:bg-primary-700 hover:scale-110 transition-all duration-300"
+                className="w-14 h-14 bg-gradient-to-br from-primary-500 to-primary-700 text-white rounded-full shadow-2xl shadow-primary-600/40 flex items-center justify-center hover:shadow-primary-600/50 hover:scale-110 hover:rotate-3 transition-all duration-300 relative overflow-hidden group"
             >
-                {isOpen ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                {isOpen ? <X className="w-6 h-6 relative z-10" /> : <MessageCircle className="w-6 h-6 relative z-10" />}
             </button>
         </div>
     );

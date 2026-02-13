@@ -21,8 +21,12 @@ export class AnalyticsController {
     @Get('revenue-chart')
     @Roles(UserRole.ADMIN)
     @ApiOperation({ summary: 'Get monthly revenue chart data' })
-    getRevenueChart(@Query('months') months?: number) {
-        return this.analyticsService.getRevenueChart(months || 12);
+    getRevenueChart(
+        @Query('months') months?: number,
+        @Query('startDate') startDate?: string,
+        @Query('endDate') endDate?: string,
+    ) {
+        return this.analyticsService.getRevenueChart(months || 12, startDate, endDate);
     }
 
     @Get('appointments')

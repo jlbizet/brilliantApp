@@ -30,9 +30,11 @@ export class AnalyticsService {
                 where: { startTime: { gte: monthStart }, status: { notIn: ['CANCELLED'] } },
             }),
             this.prisma.invoice.count({ where: { status: { in: ['PENDING', 'PARTIAL', 'OVERDUE'] } } }),
-            this.prisma.payment.aggregate({
-                where: { paidAt: { gte: monthStart } },
-                _sum: { amount: true },
+            this.prisma.invoice.aggregate({
+                where: { 
+                    createdAt: { gte: monthStart }
+                },
+                _sum: { total: true },
             }),
             this.prisma.$queryRaw`SELECT COUNT(*) as count FROM inventory_items WHERE quantity <= "minQuantity"` as any,
         ]);
@@ -43,12 +45,51 @@ export class AnalyticsService {
             todayAppointments,
             monthAppointments,
             pendingInvoices,
-            monthRevenue: Number(monthRevenue._sum.amount || 0),
+            monthRevenue: Number(monthRevenue._sum?.total || 0),
             lowStockItems: Number(lowStockItems?.[0]?.count || 0),
         };
     }
 
-    async getRevenueChart(months: number = 12) {
+    async getRevenueChart(months: number = 12, startDate?: string, endDate?: string) {
+        // If date range is provided, filter by date range and group by month
+        if (startDate && endDate) {
+            const results = [];
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+
+            // Calculate number of months between dates
+            const monthDiff = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
+
+            for (let i = 0; i < monthDiff; i++) {
+                const monthStart = new Date(start);
+                monthStart.setMonth(start.getMonth() + i, 1);
+                monthStart.setHours(0, 0, 0, 0);
+
+                const monthEnd = new Date(monthStart);
+                monthEnd.setMonth(monthEnd.getMonth() + 1);
+
+                // Don't go beyond the end date
+                if (monthStart > end) break;
+
+                const actualEnd = monthEnd > end ? end : monthEnd;
+
+                const revenue = await this.prisma.invoice.aggregate({
+                    where: { createdAt: { gte: monthStart, lte: actualEnd } },
+                    _sum: { total: true },
+                });
+
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                results.push({
+                    month: monthNames[monthStart.getMonth()],
+                    revenue: Number(revenue._sum?.total || 0),
+                });
+            }
+            return results;
+        }
+
+        // Default behavior: last N months
         const results = [];
         for (let i = months - 1; i >= 0; i--) {
             const start = new Date();
@@ -57,14 +98,14 @@ export class AnalyticsService {
             const end = new Date(start);
             end.setMonth(end.getMonth() + 1);
 
-            const revenue = await this.prisma.payment.aggregate({
-                where: { paidAt: { gte: start, lt: end } },
-                _sum: { amount: true },
+            const revenue = await this.prisma.invoice.aggregate({
+                where: { createdAt: { gte: start, lt: end } },
+                _sum: { total: true },
             });
 
             results.push({
                 month: start.toISOString().slice(0, 7),
-                revenue: Number(revenue._sum.amount || 0),
+                revenue: Number(revenue._sum?.total || 0),
             });
         }
         return results;

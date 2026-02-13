@@ -5,6 +5,7 @@ import { X, Calendar, Clock, User, FileText, CheckCircle, AlertCircle, XCircle, 
 import { format } from 'date-fns';
 import { Appointment, UserRole } from '../../../types';
 import { useAuthStore } from '../../../stores';
+import { DatePicker, TimePicker } from '../../../components/ui';
 
 interface AppointmentDetailsModalProps {
     isOpen: boolean;
@@ -120,11 +121,14 @@ export default function AppointmentDetailsModal({ isOpen, onClose, appointment, 
                                         <div className="space-y-1">
                                             <p className="text-gray-500 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {t('common.date')}</p>
                                             {isEditing ? (
-                                                <input type="date" className="input-field py-1" value={editData.startTime.split('T')[0]} onChange={e => {
-                                                    const date = e.target.value;
-                                                    const time = editData.startTime.split('T')[1];
-                                                    setEditData({ ...editData, startTime: `${date}T${time}` });
-                                                }} />
+                                                <DatePicker
+                                                    value={editData.startTime.split('T')[0]}
+                                                    onChange={date => {
+                                                        const time = editData.startTime.split('T')[1];
+                                                        setEditData({ ...editData, startTime: `${date}T${time}` });
+                                                    }}
+                                                    className="py-1"
+                                                />
                                             ) : (
                                                 <p className="font-medium text-gray-900 dark:text-white">
                                                     {format(new Date(appointment.startTime), 'MMM d, yyyy')}
@@ -134,19 +138,23 @@ export default function AppointmentDetailsModal({ isOpen, onClose, appointment, 
                                         <div className="space-y-1">
                                             <p className="text-gray-500 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {t('common.time')}</p>
                                             {isEditing ? (
-                                                <input type="time" className="input-field py-1" value={editData.startTime.split('T')[1].slice(0, 5)} onChange={e => {
-                                                    const time = e.target.value;
-                                                    const date = editData.startTime.split('T')[0];
-                                                    const currentEnd = new Date(editData.endTime);
-                                                    const currentStart = new Date(editData.startTime);
-                                                    const duration = currentEnd.getTime() - currentStart.getTime();
-                                                    const newStart = new Date(`${date}T${time}`);
-                                                    setEditData({
-                                                        ...editData,
-                                                        startTime: `${date}T${time}`,
-                                                        endTime: new Date(newStart.getTime() + duration).toISOString()
-                                                    });
-                                                }} />
+                                                <TimePicker
+                                                    value={editData.startTime.split('T')[1].slice(0, 5)}
+                                                    onChange={time => {
+                                                        const date = editData.startTime.split('T')[0];
+                                                        const currentEnd = new Date(editData.endTime);
+                                                        const currentStart = new Date(editData.startTime);
+                                                        const duration = currentEnd.getTime() - currentStart.getTime();
+                                                        const newStart = new Date(`${date}T${time}`);
+                                                        setEditData({
+                                                            ...editData,
+                                                            startTime: `${date}T${time}`,
+                                                            endTime: new Date(newStart.getTime() + duration).toISOString()
+                                                        });
+                                                    }}
+                                                    className="py-1"
+                                                    minuteStep={15}
+                                                />
                                             ) : (
                                                 <p className="font-medium text-gray-900 dark:text-white">
                                                     {format(new Date(appointment.startTime), 'h:mm a')} - {format(new Date(appointment.endTime), 'h:mm a')}
