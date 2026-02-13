@@ -1,5 +1,5 @@
 import api from './client';
-import type { AuthResponse, PaginatedResponse, Patient, Appointment, DashboardStats, TreatmentPlan, Invoice, InventoryItem, User, Notification, Document } from '../types';
+import type { AuthResponse, PaginatedResponse, Patient, Appointment, DashboardStats, TreatmentPlan, Invoice, InventoryItem, User, Notification, Document, Prescription } from '../types';
 
 // ---- Auth ----
 export const authApi = {
@@ -27,8 +27,12 @@ export const patientsApi = {
         api.delete(`/patients/${id}`).then(r => r.data),
     addMedicalHistory: (patientId: string, data: any) =>
         api.post(`/patients/${patientId}/medical-history`, data).then(r => r.data),
+    removeMedicalHistory: (historyId: string) =>
+        api.delete(`/patients/medical-history/${historyId}`).then(r => r.data),
     addAllergy: (patientId: string, data: any) =>
         api.post(`/patients/${patientId}/allergies`, data).then(r => r.data),
+    removeAllergy: (allergyId: string) =>
+        api.delete(`/patients/allergies/${allergyId}`).then(r => r.data),
 };
 
 // ---- Appointments ----
@@ -61,6 +65,8 @@ export const usersApi = {
         api.patch(`/users/${id}`, data).then(r => r.data),
     delete: (id: string) =>
         api.delete(`/users/${id}`).then(r => r.data),
+    updatePassword: (id: string, data: { currentPassword: string; newPassword: string }) =>
+        api.patch(`/users/${id}/password`, data).then(r => r.data),
 };
 
 // ---- Treatments ----
@@ -73,10 +79,14 @@ export const treatmentsApi = {
         api.post('/treatments/plans', data).then(r => r.data),
     updatePlan: (id: string, data: any) =>
         api.patch(`/treatments/plans/${id}`, data).then(r => r.data),
+    deletePlan: (id: string) =>
+        api.delete(`/treatments/plans/${id}`).then(r => r.data),
     createTreatment: (data: any) =>
         api.post('/treatments', data).then(r => r.data),
     updateTreatment: (id: string, data: any) =>
         api.patch(`/treatments/${id}`, data).then(r => r.data),
+    deleteTreatment: (id: string) =>
+        api.delete(`/treatments/${id}`).then(r => r.data),
 };
 
 // ---- Billing ----
@@ -87,6 +97,8 @@ export const billingApi = {
         api.get<Invoice>(`/billing/invoices/${id}`).then(r => r.data),
     createInvoice: (data: any) =>
         api.post('/billing/invoices', data).then(r => r.data),
+    deleteInvoice: (id: string) =>
+        api.delete(`/billing/invoices/${id}`).then(r => r.data),
     createPayment: (data: any) =>
         api.post('/billing/payments', data).then(r => r.data),
     getRevenueReport: (startDate: string, endDate: string) =>
@@ -139,6 +151,10 @@ export const notificationsApi = {
 export const documentsApi = {
     getByPatient: (patientId: string) =>
         api.get<Document[]>(`/documents/patient/${patientId}`).then(r => r.data),
+    getOne: (id: string) =>
+        api.get<Document>(`/documents/${id}`).then(r => r.data),
+    download: (id: string) =>
+        api.get(`/documents/${id}/download`, { responseType: 'blob' }).then(r => r.data),
     upload: (patientId: string, file: File, type: string, description?: string) => {
         const formData = new FormData();
         formData.append('file', file);
@@ -174,4 +190,18 @@ export const odontogramApi = {
         api.post(`/odontogram/${patientId}/condition`, data).then(r => r.data),
     removeCondition: (id: string) =>
         api.delete(`/odontogram/condition/${id}`).then(r => r.data),
+};
+
+// ---- Prescriptions ----
+export const prescriptionsApi = {
+    getAll: (patientId?: string) =>
+        api.get<Prescription[]>('/prescriptions', { params: { patientId } }).then(r => r.data),
+    getOne: (id: string) =>
+        api.get<Prescription>(`/prescriptions/${id}`).then(r => r.data),
+    create: (data: any) =>
+        api.post<Prescription>('/prescriptions', data).then(r => r.data),
+    update: (id: string, data: any) =>
+        api.patch<Prescription>(`/prescriptions/${id}`, data).then(r => r.data),
+    delete: (id: string) =>
+        api.delete(`/prescriptions/${id}`).then(r => r.data),
 };

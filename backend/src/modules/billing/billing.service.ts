@@ -121,4 +121,10 @@ export class BillingService {
             data: { status: dto.status },
         });
     }
+
+    async deleteInvoice(id: string) {
+        await this.findOneInvoice(id);
+        await this.prisma.invoice.delete({ where: { id } });
+        return { message: 'Invoice deleted successfully' };
+    }
 }

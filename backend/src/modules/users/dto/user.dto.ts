@@ -16,3 +16,8 @@ export class CreateUserDto {
 export class UpdateUserDto extends PartialType(CreateUserDto) {
     @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
 }
+
+export class UpdatePasswordDto {
+    @ApiProperty() @IsString() currentPassword: string;
+    @ApiProperty() @IsString() newPassword: string;
+}

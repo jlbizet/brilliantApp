@@ -3,6 +3,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { CurrentUser } from '../../common/decorators';
+import { ApiBody } from '@nestjs/swagger';
 
 @ApiTags('Notifications')
 @Controller('notifications')

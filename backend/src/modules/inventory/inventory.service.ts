@@ -74,7 +74,7 @@ export class InventoryService {
             where: { quantity: { lte: this.prisma.inventoryItem.fields.minQuantity as any } },
         }).then(() =>
             // Prisma doesn't support field comparison directly, use raw
-            this.prisma.$queryRaw`SELECT * FROM inventory_items WHERE quantity <= min_quantity ORDER BY quantity ASC`
+            this.prisma.$queryRaw`SELECT * FROM inventory_items WHERE quantity <= "minQuantity" ORDER BY quantity ASC`
         );
     }
 }

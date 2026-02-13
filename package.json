@@ -9,6 +9,19 @@
     "dev:frontend": "cd frontend && npm run dev",
     "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces",
-    "test": "npm run test --workspaces"
+    "test": "npm run test --workspaces",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" --names \"BACKEND,FRONTEND\" --prefix-colors \"cyan,magenta\"",
+    "start": "npm run dev",
+    "setup": "npm install && npm run setup:env",
+    "setup:env": "cd backend && if not exist .env (copy .env.example .env && echo Created backend/.env from .env.example) else (echo backend/.env already exists)",
+    "db:setup": "cd backend && npm run prisma:generate && npm run prisma:migrate",
+    "db:seed": "cd backend && npm run prisma:seed",
+    "db:studio": "cd backend && npm run prisma:studio",
+    "db:reset": "cd backend && npm run prisma:migrate reset --force",
+    "clean": "cd backend && rmdir /s /q node_modules dist 2>nul & cd ..\frontend && rmdir /s /q node_modules dist 2>nul & cd .. && rmdir /s /q node_modules 2>nul",
+    "update": "git pull && npm install && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }

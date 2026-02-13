@@ -1,8 +1,13 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete, NotFoundException, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { OdontogramService } from './odontogram.service';
 import { CreateOdontogramDto, UpdateOdontogramDto, CreateToothConditionDto, UpdateToothConditionDto } from './dto';
 
+@ApiTags('Odontogram')
 @Controller('odontogram')
+@UseGuards(AuthGuard('jwt'))
+@ApiBearerAuth()
 export class OdontogramController {
     constructor(private readonly odontogramService: OdontogramService) { }
 

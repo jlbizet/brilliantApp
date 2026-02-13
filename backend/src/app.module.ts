@@ -17,6 +17,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { WaitlistModule } from './modules/waitlist/waitlist.module';
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
 import { OdontogramModule } from './modules/odontogram/odontogram.module';
+import { PrescriptionsModule } from './modules/prescriptions/prescriptions.module';
 
 @Module({
     imports: [
@@ -44,6 +45,7 @@ import { OdontogramModule } from './modules/odontogram/odontogram.module';
         WaitlistModule,
         ChatbotModule,
         OdontogramModule,
+        PrescriptionsModule,
     ],
     providers: [
         {

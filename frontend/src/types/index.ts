@@ -96,7 +96,6 @@ export interface TreatmentPlan {
     status: TreatmentStatus;
     estimatedCost: number;
     patient?: Pick<Patient, 'id' | 'firstName' | 'lastName'>;
-    patient?: Pick<Patient, 'id' | 'firstName' | 'lastName'>;
     treatments?: Treatment[];
     createdAt?: string;
     updatedAt?: string;
@@ -170,13 +169,43 @@ export interface Document {
     uploadedAt: string;
 }
 
+export interface WaitlistEntry {
+    id: string;
+    patientId: string;
+    dentistId?: string;
+    preferredDays?: string;
+    preferredTime?: string;
+    priority: number;
+    notes?: string;
+    status: string;
+    createdAt: string;
+    updatedAt: string;
+    patient?: Pick<Patient, 'id' | 'firstName' | 'lastName' | 'phone'>;
+}
+
+export interface Prescription {
+    id: string;
+    patientId: string;
+    medication: string;
+    dosage: string;
+    frequency: string;
+    duration: string;
+    notes?: string;
+    prescribedAt: string;
+    createdAt: string;
+    patient?: Pick<Patient, 'id' | 'firstName' | 'lastName'>;
+}
+
 export interface Notification {
     id: string;
+    userId?: string;
+    recipientPatientId?: string;
+    type: string;
     title: string;
     message: string;
-    type: string;
     isRead: boolean;
     createdAt: string;
+    metadata?: any;
 }
 
 export interface DashboardStats {

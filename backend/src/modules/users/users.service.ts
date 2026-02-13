@@ -78,4 +78,20 @@ export class UsersService {
             orderBy: { firstName: 'asc' },
         });
     }
+
+    async updatePassword(id: string, currentPassword: string, newPassword: string) {
+        const user = await this.prisma.user.findUnique({ where: { id } });
+        if (!user) throw new NotFoundException('User not found');
+
+        const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+        if (!isPasswordValid) throw new ConflictException('Current password is incorrect');
+
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+        await this.prisma.user.update({
+            where: { id },
+            data: { password: hashedPassword },
+        });
+
+        return { message: 'Password updated successfully' };
+    }
 }

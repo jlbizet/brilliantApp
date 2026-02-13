@@ -146,6 +146,7 @@ model Patient {
   waitlistEntries WaitlistEntry[]
   chatSessions    ChatSession[]
   odontogram      Odontogram?
+  notifications   Notification[]
 
   @@index([lastName, firstName])
   @@index([phone])
@@ -375,18 +376,21 @@ model InventoryItem {
 // ============================================
 
 model Notification {
-  id        String           @id @default(uuid())
-  userId    String
-  type      NotificationType @default(GENERAL)
-  title     String
-  message   String
-  isRead    Boolean          @default(false)
-  metadata  Json?
-  createdAt DateTime         @default(now())
+  id                  String           @id @default(uuid())
+  userId              String?          // optional for patient-only notifications
+  recipientPatientId  String?
+  type                NotificationType @default(GENERAL)
+  title               String
+  message             String
+  isRead              Boolean          @default(false)
+  metadata            Json?
+  createdAt           DateTime         @default(now())
 
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  patient   Patient?  @relation(fields: [recipientPatientId], references: [id], onDelete: Cascade)
 
-  @@index([userId, isRead])
+  @@index([userId])
+  @@index([recipientPatientId])
   @@map("notifications")
 }
 

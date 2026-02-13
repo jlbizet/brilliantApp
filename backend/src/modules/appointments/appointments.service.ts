@@ -3,10 +3,14 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { CreateAppointmentDto, UpdateAppointmentDto, AppointmentQueryDto } from './dto';
 import { PaginationDto, PaginatedResponseDto } from '../../common/dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AppointmentsService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private notificationsService: NotificationsService,
+    ) { }
 
     async findAll(query: PaginationDto & AppointmentQueryDto) {
         const where: any = {};
@@ -108,7 +112,7 @@ export class AppointmentsService {
 
         try {
             if (!dto.isRecurring) {
-                return await this.prisma.appointment.create({
+                const appointment = await this.prisma.appointment.create({
                     data: {
                         ...dto,
                         startTime: new Date(dto.startTime),
@@ -119,6 +123,11 @@ export class AppointmentsService {
                         dentist: { select: { id: true, firstName: true, lastName: true } },
                     },
                 });
+
+                // Notify dentist about new appointment
+                await this.notifyAppointmentCreated(appointment);
+
+                return appointment;
             }
 
             // Handle Recurring Appointments
@@ -175,20 +184,48 @@ export class AppointmentsService {
     }
 
     async update(id: string, dto: UpdateAppointmentDto) {
-        await this.findOne(id);
+        // Get old appointment data before updating
+        const oldAppointment = await this.findOne(id);
+
         const data: any = { ...dto };
         if (dto.startTime) data.startTime = new Date(dto.startTime);
         if (dto.endTime) data.endTime = new Date(dto.endTime);
-        return this.prisma.appointment.update({ where: { id }, data });
+
+        const appointment = await this.prisma.appointment.update({
+            where: { id },
+            data,
+            include: {
+                patient: { select: { id: true, firstName: true, lastName: true } },
+                dentist: { select: { id: true, firstName: true, lastName: true } },
+            },
+        });
+
+        // Notify dentist about appointment update
+        await this.notifyAppointmentUpdated(appointment, oldAppointment);
+
+        return appointment;
     }
 
     async remove(id: string) {
-        await this.findOne(id);
-        await this.prisma.appointment.update({
+        const appointment = await this.findOne(id);
+
+        await this.prisma.appointment.delete({
             where: { id },
-            data: { status: 'CANCELLED' },
         });
-        return { message: 'Appointment cancelled' };
+
+        // Notify both dentist and patient about cancellation/deletion
+        if (appointment) {
+            await this.notificationsService.createAppointmentNotification(
+                appointment.dentistId,
+                appointment.patientId,
+                'Appointment Deleted',
+                `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} has been permanently removed`,
+                'Appointment Cancelled',
+                'Your appointment has been removed from the schedule',
+            );
+        }
+
+        return { message: 'Appointment deleted successfully' };
     }
 
     async getTodayCount() {
@@ -219,15 +256,98 @@ export class AppointmentsService {
                 startTime: { gte: tomorrow, lt: endOfTomorrow },
                 status: 'SCHEDULED',
             },
-            include: { patient: true },
+            include: { patient: true, dentist: true },
         });
 
-        console.log(`[Reminders] Found ${upcoming.length} appointments for tomorrow. Sending notifications...`);
+        console.log(`[Reminders] Found ${upcoming.length} appointments for tomorrow. Creating notifications...`);
 
         for (const apt of upcoming) {
-            // Placeholder for SMS/Email service
-            // this.notificationService.sendAppointmentReminder(apt.patient, apt);
-            console.log(`[Reminders] Notifying ${apt.patient.firstName} ${apt.patient.lastName} about appointment at ${apt.startTime}`);
+            const timeStr = apt.startTime.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+
+            // Notify BOTH dentist AND patient
+            await this.notificationsService.createAppointmentNotification(
+                apt.dentistId,
+                apt.patientId,
+                'Upcoming Appointment Tomorrow',
+                `You have an appointment with ${apt.patient.firstName} ${apt.patient.lastName} tomorrow at ${timeStr}`,
+                'Appointment Reminder',
+                `Reminder: You have an appointment with Dr. ${apt.dentist.firstName} ${apt.dentist.lastName} tomorrow at ${timeStr}`,
+            );
+
+            console.log(`[Reminders] Created notifications for appointment with ${apt.patient.firstName} ${apt.patient.lastName}`);
         }
+    }
+
+    private async notifyAppointmentCreated(appointment: any) {
+        const timeStr = appointment.startTime.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+        const dateStr = appointment.startTime.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric'
+        });
+
+        // Notify BOTH dentist AND patient
+        await this.notificationsService.createAppointmentNotification(
+            appointment.dentistId,
+            appointment.patientId,
+            'New Appointment Scheduled',
+            `New appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} on ${dateStr} at ${timeStr}`,
+            'Appointment Confirmed',
+            `Your appointment with Dr. ${appointment.dentist?.firstName} ${appointment.dentist?.lastName} has been scheduled for ${dateStr} at ${timeStr}`,
+        );
+    }
+
+    private async notifyAppointmentUpdated(appointment: any, oldData: any) {
+        const timeStr = appointment.startTime.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+        const dateStr = appointment.startTime.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric'
+        });
+
+        let dentistMessage = '';
+        let patientMessage = '';
+        let dentistTitle = 'Appointment Updated';
+        let patientTitle = 'Appointment Update';
+
+        if (oldData.startTime.getTime() !== appointment.startTime.getTime()) {
+            dentistMessage = `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} rescheduled to ${dateStr} at ${timeStr}`;
+            patientMessage = `Your appointment has been rescheduled to ${dateStr} at ${timeStr}`;
+            dentistTitle = 'Appointment Rescheduled';
+            patientTitle = 'Appointment Rescheduled';
+        } else if (appointment.status !== oldData.status) {
+            dentistMessage = `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} status changed to ${appointment.status}`;
+            patientMessage = `Your appointment status has been updated to ${appointment.status}`;
+            if (appointment.status === 'CANCELLED') {
+                dentistTitle = 'Appointment Cancelled';
+                patientTitle = 'Appointment Cancelled';
+                patientMessage = 'Your appointment has been cancelled';
+            }
+        } else {
+            dentistMessage = `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} has been updated`;
+            patientMessage = 'Your appointment details have been updated';
+        }
+
+        // Notify BOTH dentist AND patient
+        await this.notificationsService.createAppointmentNotification(
+            appointment.dentistId,
+            appointment.patientId,
+            dentistTitle,
+            dentistMessage,
+            patientTitle,
+            patientMessage,
+        );
     }
 }

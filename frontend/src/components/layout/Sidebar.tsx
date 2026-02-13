@@ -4,6 +4,7 @@ import { useAuthStore, useUIStore } from '../../stores';
 import {
     LayoutDashboard, Users, Calendar, Stethoscope, Receipt,
     Package, Settings, LogOut, ChevronLeft, ChevronRight, Heart,
+    FileText,
 } from 'lucide-react';
 
 const navItems = [
@@ -11,6 +12,7 @@ const navItems = [
     { path: '/patients', labelKey: 'common.patients', icon: Users },
     { path: '/appointments', labelKey: 'common.appointments', icon: Calendar },
     { path: '/treatments', labelKey: 'common.treatments', icon: Stethoscope },
+    { path: '/prescriptions', labelKey: 'common.prescriptions', icon: FileText },
     { path: '/billing', labelKey: 'common.billing', icon: Receipt },
     { path: '/inventory', labelKey: 'common.inventory', icon: Package },
     { path: '/settings', labelKey: 'common.settings', icon: Settings },

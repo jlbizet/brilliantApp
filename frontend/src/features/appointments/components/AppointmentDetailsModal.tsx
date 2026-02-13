@@ -92,7 +92,7 @@ export default function AppointmentDetailsModal({ isOpen, onClose, appointment, 
                                     <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                                         <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center">
                                             <span className="text-xl font-bold text-primary-600 dark:text-primary-400">
-                                                {appointment.patient?.firstName[0]}{appointment.patient?.lastName[0]}
+                                                {appointment.patient?.firstName?.[0]}{appointment.patient?.lastName?.[0]}
                                             </span>
                                         </div>
                                         <div>

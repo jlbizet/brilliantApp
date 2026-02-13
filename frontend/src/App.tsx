@@ -10,6 +10,8 @@ import TreatmentsPage from './features/treatments/TreatmentsPage';
 import BillingPage from './features/billing/BillingPage';
 import InventoryPage from './features/inventory/InventoryPage';
 import SettingsPage from './features/settings/SettingsPage';
+import PrescriptionsPage from './features/prescriptions/PrescriptionsPage';
+import NotificationsPage from './features/notifications/NotificationsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -35,6 +37,8 @@ export default function App() {
                                 <Route path="/treatments" element={<TreatmentsPage />} />
                                 <Route path="/billing" element={<BillingPage />} />
                                 <Route path="/inventory" element={<InventoryPage />} />
+                                <Route path="/prescriptions" element={<PrescriptionsPage />} />
+                                <Route path="/notifications" element={<NotificationsPage />} />
                                 <Route path="/settings" element={<SettingsPage />} />
                             </Routes>
                         </MainLayout>

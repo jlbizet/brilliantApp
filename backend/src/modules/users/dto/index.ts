@@ -1,1 +1,1 @@
-export { CreateUserDto, UpdateUserDto } from './user.dto';
+export { CreateUserDto, UpdateUserDto, UpdatePasswordDto } from './user.dto';

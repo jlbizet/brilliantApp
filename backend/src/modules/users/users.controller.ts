@@ -2,7 +2,7 @@ import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } f
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { CreateUserDto, UpdateUserDto } from './dto';
+import { CreateUserDto, UpdateUserDto, UpdatePasswordDto } from './dto';
 import { PaginationDto } from '../../common/dto';
 import { Roles } from '../../common/decorators';
 import { RolesGuard } from '../../common/guards';
@@ -54,5 +54,11 @@ export class UsersController {
     @ApiOperation({ summary: 'Delete user (Admin only)' })
     remove(@Param('id') id: string) {
         return this.usersService.remove(id);
+    }
+
+    @Patch(':id/password')
+    @ApiOperation({ summary: 'Update user password' })
+    updatePassword(@Param('id') id: string, @Body() dto: UpdatePasswordDto) {
+        return this.usersService.updatePassword(id, dto.currentPassword, dto.newPassword);
     }
 }

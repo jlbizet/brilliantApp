@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { BillingService } from './billing.service';
@@ -46,5 +46,11 @@ export class BillingController {
     @ApiOperation({ summary: 'Update invoice status' })
     updateInvoiceStatus(@Param('id') id: string, @Body() dto: UpdateInvoiceStatusDto) {
         return this.billingService.updateInvoiceStatus(id, dto);
+    }
+
+    @Delete('invoices/:id')
+    @ApiOperation({ summary: 'Delete an invoice' })
+    deleteInvoice(@Param('id') id: string) {
+        return this.billingService.deleteInvoice(id);
     }
 }
