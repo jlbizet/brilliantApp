@@ -76,10 +76,10 @@ export default function BillingTab({ patientId }: BillingTabProps) {
     );
 
     const totalBalance = invoices?.reduce((acc: number, inv: Invoice) =>
-        inv.status !== 'PAID' ? acc + inv.total : acc, 0) || 0;
+        inv.status !== 'PAID' ? acc + Number(inv.total) : acc, 0) || 0;
 
     const paidTotal = invoices?.reduce((acc: number, inv: Invoice) =>
-        inv.status === 'PAID' ? acc + inv.total : acc, 0) || 0;
+        inv.status === 'PAID' ? acc + Number(inv.total) : acc, 0) || 0;
 
     return (
         <div className="space-y-6">
@@ -93,7 +93,7 @@ export default function BillingTab({ patientId }: BillingTabProps) {
                         </div>
                         <div>
                             <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">{t('billing.outstanding_balance')}</p>
-                            <p className="text-3xl font-black text-gray-900 dark:text-white">${totalBalance.toLocaleString()}</p>
+                            <p className="text-3xl font-black text-gray-900 dark:text-white">${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
                     </div>
                 </div>
@@ -106,7 +106,7 @@ export default function BillingTab({ patientId }: BillingTabProps) {
                         </div>
                         <div>
                             <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">{t('billing.total_paid')}</p>
-                            <p className="text-3xl font-black text-gray-900 dark:text-white">${paidTotal.toLocaleString()}</p>
+                            <p className="text-3xl font-black text-gray-900 dark:text-white">${paidTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
                     </div>
                 </div>
@@ -189,7 +189,7 @@ export default function BillingTab({ patientId }: BillingTabProps) {
                                                     </div>
                                                 </td>
                                                 <td className="py-4">
-                                                    <span className="font-black text-lg text-gray-900 dark:text-white">${inv.total.toLocaleString()}</span>
+                                                    <span className="font-black text-lg text-gray-900 dark:text-white">${Number(inv.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                 </td>
                                                 <td className="py-4">
                                                     <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>

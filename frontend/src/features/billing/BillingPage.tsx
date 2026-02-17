@@ -131,7 +131,7 @@ export default function BillingPage() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">{t('billing.total_revenue')}</p>
-                            <p className="text-3xl font-bold text-gray-900 dark:text-white">${totalRevenue.toLocaleString()}</p>
+                            <p className="text-3xl font-bold text-gray-900 dark:text-white">${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
                         <div className="w-14 h-14 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center shadow-lg">
                             <DollarSign className="w-7 h-7 text-white" />
@@ -142,7 +142,7 @@ export default function BillingPage() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">{t('billing.collected')}</p>
-                            <p className="text-3xl font-bold text-gray-900 dark:text-white">${paidAmount.toLocaleString()}</p>
+                            <p className="text-3xl font-bold text-gray-900 dark:text-white">${paidAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
                         <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
                             <TrendingUp className="w-7 h-7 text-white" />
@@ -189,7 +189,7 @@ export default function BillingPage() {
                                                 </div>
                                             </td>
                                             <td className="py-4 px-6">
-                                                <span className="font-bold text-gray-900 dark:text-white text-lg">${Number(inv.total).toLocaleString()}</span>
+                                                <span className="font-bold text-gray-900 dark:text-white text-lg">${Number(inv.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                             </td>
                                             <td className="py-4 px-6">
                                                 <span className={`badge ${config.badge} flex items-center gap-1.5 w-fit text-xs`}>

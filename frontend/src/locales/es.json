@@ -25,6 +25,7 @@
         "loading": "Cargando...",
         "no_results": "No se encontraron resultados",
         "pagination_info": "Página {{page}} de {{totalPages}} ({{total}} resultados)",
+        "pages": "Páginas",
         "staff": "Gestión de Personal"
     },
     "dashboard": {
@@ -71,9 +72,13 @@
     },
     "patients": {
         "title": "Pacientes",
+        "manage_description": "Administrar los pacientes de su clínica",
         "list": "Lista de Pacientes",
         "details": "Detalles del Paciente",
         "add": "Agregar Paciente",
+        "total_patients": "Total de Pacientes",
+        "new_this_month": "Nuevos Este Mes",
+        "form_description": "Complete la información del paciente a continuación",
         "first_name": "Nombre",
         "last_name": "Apellido",
         "email": "Correo Electrónico",

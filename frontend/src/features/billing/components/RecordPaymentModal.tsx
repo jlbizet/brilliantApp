@@ -120,7 +120,7 @@ export default function RecordPaymentModal({ isOpen, onClose, invoice }: RecordP
                                         </div>
                                         <div className="flex justify-between text-sm">
                                             <span className="text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider text-[10px]">{t('billing.total')}</span>
-                                            <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-500">${invoice.total.toLocaleString()}</span>
+                                            <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-500">${Number(invoice.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
 

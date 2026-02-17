@@ -196,7 +196,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
                                                                         <span className="text-[10px] text-gray-500 uppercase font-medium">{t.tooth ? `Tooth ${t.tooth}` : 'General'}</span>
                                                                     </div>
                                                                     <div className="flex items-center gap-3">
-                                                                        <span className="text-sm font-black text-primary-600 dark:text-primary-400">${Number(t.cost).toLocaleString()}</span>
+                                                                        <span className="text-sm font-black text-primary-600 dark:text-primary-400">${Number(t.cost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                                         <div className="w-6 h-6 rounded-full bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center group-hover:bg-primary-100 dark:group-hover:bg-primary-900/50 transition-colors">
                                                                             <Plus className="w-3.5 h-3.5 text-primary-500 transition-colors" />
                                                                         </div>
@@ -290,7 +290,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
                                                     </div>
                                                     <div className="space-y-1.5 text-right">
                                                         <p className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">{t('billing.subtotal') || 'Subtotal'}</p>
-                                                        <p className="text-xl font-bold text-gray-900 dark:text-white">${subtotal.toLocaleString()}</p>
+                                                        <p className="text-xl font-bold text-gray-900 dark:text-white">${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                                     </div>
                                                 </div>
 
@@ -321,7 +321,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
 
                                                 <div className="pt-4 border-t border-primary-200/50 dark:border-primary-800/30 flex justify-between items-center">
                                                     <span className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('billing.total') || 'Total Amount'}</span>
-                                                    <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-500">${total.toLocaleString()}</span>
+                                                    <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-500">${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                 </div>
                                             </div>
 
