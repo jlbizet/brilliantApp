@@ -300,6 +300,25 @@ export default function AppointmentsPage() {
                         datesSet={(arg: any) => {
                             setDateRange({ start: arg.startStr, end: arg.endStr });
                         }}
+                        select={(info: any) => {
+                            // Handle date selection without timezone shift
+                            const start = info.start;
+                            const end = info.end;
+                            
+                            // Format dates preserving local time
+                            const formatLocalISO = (date: Date) => {
+                                const pad = (n: number) => String(n).padStart(2, '0');
+                                return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
+                            };
+                            
+                            setFormData({
+                                ...formData,
+                                startTime: formatLocalISO(start),
+                                endTime: formatLocalISO(end),
+                            });
+                            setShowForm(true);
+                            calendarRef.current?.getApi().unselect();
+                        }}
                         eventDrop={(info: any) => {
                             const apt = info.event.extendedProps as Appointment;
                             const newStart = info.event.start?.toISOString();

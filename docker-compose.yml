@@ -1,33 +1,126 @@
-version: '3.8'
-
 services:
+  # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
     container_name: dental_crm_db
     restart: unless-stopped
-    ports:
-      - '5433:5432'
     environment:
-      POSTGRES_USER: dental_user
-      POSTGRES_PASSWORD: dental_pass
-      POSTGRES_DB: dental_crm
+      POSTGRES_USER: ${DB_USER:-dental_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dental_pass}
+      POSTGRES_DB: ${DB_NAME:-dental_crm}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U dental_user -d dental_crm']
-      interval: 5s
+      test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-dental_user} -d ${DB_NAME:-dental_crm}']
+      interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - dental_crm_network
 
+  # Redis Cache (for future use with Bull queue)
   redis:
     image: redis:7-alpine
     container_name: dental_crm_redis
     restart: unless-stopped
-    ports:
-      - '6379:6379'
+    command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - dental_crm_network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: dental_crm_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-dental_user}
+      DB_PASSWORD: ${DB_PASSWORD:-dental_pass}
+      DB_NAME: ${DB_NAME:-dental_crm}
+      DATABASE_URL: postgresql://${DB_USER:-dental_user}:${DB_PASSWORD:-dental_pass}@postgres:5432/${DB_NAME:-dental_crm}?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-15m}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-7d}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
+    networks:
+      - dental_crm_network
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:3000/api/v1/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Web App
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+    container_name: dental_crm_frontend
+    restart: unless-stopped
+    ports:
+      - '${FRONTEND_PORT:-80}:80'
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - dental_crm_network
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Nginx Reverse Proxy (optional - for production with SSL)
+  nginx:
+    image: nginx:alpine
+    container_name: dental_crm_nginx
+    restart: unless-stopped
+    ports:
+      - '${NGINX_PORT:-443}:443'
+      - '${NGINX_HTTP_PORT:-8080}:80'
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - dental_crm_network
+    profiles:
+      - with-nginx
 
 volumes:
   postgres_data:
   redis_data:
+  uploads_data:
+
+networks:
+  dental_crm_network:
+    driver: bridge

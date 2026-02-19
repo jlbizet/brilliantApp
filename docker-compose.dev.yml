@@ -1,0 +1,44 @@
+# Development Docker Compose
+# This extends the production compose with development-specific settings
+
+services:
+  postgres:
+    ports:
+      - '5433:5432'
+    environment:
+      POSTGRES_USER: dental_user
+      POSTGRES_PASSWORD: dental_pass
+      POSTGRES_DB: dental_crm_dev
+
+  redis:
+    ports:
+      - '6379:6379'
+
+  backend:
+    build:
+      target: dependencies  # Use dependencies stage for faster rebuilds
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://dental_user:dental_pass@postgres:5432/dental_crm_dev?schema=public
+      JWT_SECRET: dev-secret-key
+      JWT_REFRESH_SECRET: dev-refresh-secret
+      SEED_DATABASE: 'true'
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./backend/src:/app/src:ro
+      - ./backend/prisma:/app/prisma:ro
+    command: npm run start:dev
+
+  frontend:
+    build:
+      target: dependencies
+    environment:
+      NODE_ENV: development
+      VITE_API_URL: http://localhost:3000/api
+    ports:
+      - '5173:5173'
+    volumes:
+      - ./frontend/src:/app/src:ro
+      - ./frontend/public:/app/public:ro
+    command: npm run dev -- --host

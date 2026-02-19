@@ -19,8 +19,15 @@ interface DatePickerProps {
 }
 
 export function DatePicker({ value, onChange, placeholder = 'Select date', className, min, max }: DatePickerProps) {
-    const [currentMonth, setCurrentMonth] = useState(value ? new Date(value) : new Date());
-    const selectedDate = value ? new Date(value) : null;
+    // Helper to parse date string without timezone shift
+    const parseDate = (dateStr: string) => {
+        if (!dateStr) return null;
+        // Append time to force local timezone interpretation
+        return new Date(`${dateStr}T00:00:00`);
+    };
+
+    const [currentMonth, setCurrentMonth] = useState(value ? parseDate(value) || new Date() : new Date());
+    const selectedDate = value ? parseDate(value) : null;
 
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(monthStart);
@@ -36,8 +43,8 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', class
     };
 
     const isDisabled = (date: Date) => {
-        if (min && date < new Date(min)) return true;
-        if (max && date > new Date(max)) return true;
+        if (min && date < (parseDate(min) || new Date(0))) return true;
+        if (max && date > (parseDate(max) || new Date(8640000000000000))) return true;
         return false;
     };
 
@@ -50,7 +57,7 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', class
                     className
                 )}
             >
-                <span>{value ? format(new Date(value), 'MMM d, yyyy') : placeholder}</span>
+                <span>{value && selectedDate ? format(selectedDate, 'MMM d, yyyy') : placeholder}</span>
                 <CalendarIcon className="w-4 h-4 text-gray-400" />
             </PopoverButton>
 

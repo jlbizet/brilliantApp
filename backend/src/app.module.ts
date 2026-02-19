@@ -18,6 +18,7 @@ import { WaitlistModule } from './modules/waitlist/waitlist.module';
 import { ChatbotModule } from './modules/chatbot/chatbot.module';
 import { OdontogramModule } from './modules/odontogram/odontogram.module';
 import { PrescriptionsModule } from './modules/prescriptions/prescriptions.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
     imports: [
@@ -32,6 +33,7 @@ import { PrescriptionsModule } from './modules/prescriptions/prescriptions.modul
         PrismaModule,
 
         // Feature modules
+        HealthModule,
         AuthModule,
         UsersModule,
         PatientsModule,
