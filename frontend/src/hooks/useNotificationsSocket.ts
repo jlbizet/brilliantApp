@@ -4,11 +4,49 @@ import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../stores';
 
 export function useNotificationsSocket() {
-    const socketRef = useRef<Socket | null>(null);
-    const queryClient = useQueryClient();
-    const { isAuthenticated } = useAuthStore();
+  const socketRef = useRef<Socket | null>(null);
+  const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuthStore();
+  const audioContextRef = useRef<AudioContext | null>(null);
 
-    const connect = useCallback(() => {
+  // Initialize audio context on first user interaction
+  const initAudioContext = useCallback(() => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    if (audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume();
+    }
+  }, []);
+
+  // Play notification sound
+  const playNotificationSound = useCallback(() => {
+    initAudioContext();
+    if (!audioContextRef.current) return;
+
+    try {
+      const audioContext = audioContextRef.current;
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      // Create a pleasant notification sound
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+      console.warn('[Notification] Could not play sound:', error);
+    }
+  }, [initAudioContext]);
+
+  const connect = useCallback(() => {
         const token = localStorage.getItem('accessToken');
         if (!token) return;
 
@@ -26,28 +64,31 @@ export function useNotificationsSocket() {
             console.log('[WebSocket] Disconnected from notifications');
         });
 
-        socket.on('notification', (notification: any) => {
-            console.log('[WebSocket] New notification received:', notification);
-            
-            // Invalidate queries to refresh notification data
-            queryClient.invalidateQueries({ queryKey: ['notifications'] });
-            queryClient.invalidateQueries({ queryKey: ['unread-notifications'] });
-            
-            // Show browser notification if permitted
-            if (Notification.permission === 'granted') {
-                new Notification(notification.title, {
-                    body: notification.message,
-                    icon: '/favicon.ico',
-                });
-            }
+    socket.on('notification', (notification: any) => {
+      console.log('[WebSocket] New notification received:', notification);
+
+      // Invalidate queries to refresh notification data
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unread-notifications'] });
+
+      // Play notification sound
+      playNotificationSound();
+
+      // Show browser notification if permitted
+      if (Notification.permission === 'granted') {
+        new Notification(notification.title, {
+          body: notification.message,
+          icon: '/favicon.ico',
         });
+      }
+    });
 
         socket.on('error', (error: any) => {
             console.error('[WebSocket] Error:', error);
         });
 
-        socketRef.current = socket;
-    }, [queryClient]);
+    socketRef.current = socket;
+  }, [queryClient, playNotificationSound]);
 
     const disconnect = useCallback(() => {
         if (socketRef.current) {
@@ -80,14 +121,29 @@ export function useNotificationsSocket() {
         };
     }, [isAuthenticated, connect, disconnect]);
 
-    // Request browser notification permission on mount
-    useEffect(() => {
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
-        }
-    }, []);
+  // Request browser notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
-    return {
+  // Initialize audio context on first user interaction (required by browser autoplay policy)
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      initAudioContext();
+    };
+
+    window.addEventListener('click', handleUserInteraction, { once: true });
+    window.addEventListener('keydown', handleUserInteraction, { once: true });
+
+    return () => {
+      window.removeEventListener('click', handleUserInteraction);
+      window.removeEventListener('keydown', handleUserInteraction);
+    };
+  }, [initAudioContext]);
+
+  return {
         socket: socketRef.current,
         acknowledgeNotification,
         markAsRead,
