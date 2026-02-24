@@ -115,38 +115,45 @@ model User {
 // ============================================
 
 model Patient {
-  id              String    @id @default(uuid())
-  firstName       String
-  lastName        String
-  email           String?   @unique
-  phone           String
-  dateOfBirth     DateTime
-  gender          Gender    @default(PREFER_NOT_TO_SAY)
-  address         String?
-  city            String?
-  state           String?
-  zipCode         String?
+  id String @id @default(uuid())
+  firstName String
+  lastName String
+  email String? @unique
+  phone String
+  dateOfBirth DateTime
+  gender Gender @default(PREFER_NOT_TO_SAY)
+  address String?
+  city String?
+  state String?
+  zipCode String?
   emergencyContact String?
-  emergencyPhone  String?
+  emergencyPhone String?
   insuranceProvider String?
   insurancePolicyNumber String?
-  insuranceGroupNumber  String?
-  notes           String?
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  insuranceGroupNumber String?
+  notes String?
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  medicalHistory  MedicalHistory[]
-  allergies       Allergy[]
-  appointments    Appointment[]
-  treatmentPlans  TreatmentPlan[]
-  invoices        Invoice[]
-  documents       Document[]
-  prescriptions   Prescription[]
+  // Notification Preferences
+  emailNotificationsEnabled Boolean @default(true)
+  smsNotificationsEnabled Boolean @default(true)
+  appointmentRemindersEnabled Boolean @default(true)
+  paymentRemindersEnabled Boolean @default(true)
+  marketingEmailsEnabled Boolean @default(false)
+
+  medicalHistory MedicalHistory[]
+  allergies Allergy[]
+  appointments Appointment[]
+  treatmentPlans TreatmentPlan[]
+  invoices Invoice[]
+  documents Document[]
+  prescriptions Prescription[]
   waitlistEntries WaitlistEntry[]
-  chatSessions    ChatSession[]
-  odontogram      Odontogram?
-  notifications   Notification[]
+  chatSessions ChatSession[]
+  odontogram Odontogram?
+  notifications Notification[]
 
   @@index([lastName, firstName])
   @@index([phone])

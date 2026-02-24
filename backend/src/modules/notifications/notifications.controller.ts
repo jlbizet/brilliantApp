@@ -32,7 +32,7 @@ export class NotificationsController {
 
     @Patch('read-all')
     @ApiOperation({ summary: 'Mark all notifications as read' })
-    markAllRead(@CurrentUser('id') userId: string) {
-        return this.notificationsService.markAllRead(userId);
+    markAllAsRead(@CurrentUser('id') userId: string) {
+        return this.notificationsService.markAllAsRead(userId);
     }
 }

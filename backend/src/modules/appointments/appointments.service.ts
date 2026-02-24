@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { CreateAppointmentDto, UpdateAppointmentDto, AppointmentQueryDto } from './dto';
@@ -7,10 +7,44 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AppointmentsService {
+    private readonly logger = new Logger(AppointmentsService.name);
+    
     constructor(
         private prisma: PrismaService,
         private notificationsService: NotificationsService,
     ) { }
+
+    /**
+     * Format date for display
+     */
+    private formatDate(date: Date): string {
+        // Use toLocaleDateString with explicit options to avoid timezone conversion issues
+        return date.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    }
+
+    /**
+     * Format time for display - Bypasses timezone conversion to preserve original time
+     */
+    private formatTime(date: Date): string {
+        // Extract time components directly from the Date object
+        // This bypasses any timezone conversion that might happen with toLocaleTimeString
+        const hours = date.getHours();
+        const minutes = date.getMinutes();
+        
+        // Convert to 12-hour format
+        const period = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        
+        // Format with leading zeros
+        const displayMinutes = minutes.toString().padStart(2, '0');
+        
+        return `${displayHours}:${displayMinutes} ${period}`;
+    }
 
     async findAll(query: PaginationDto & AppointmentQueryDto) {
         const where: any = {};
@@ -27,40 +61,27 @@ export class AppointmentsService {
             ];
         }
 
+        const page = query.page ?? 1;
+        const limit = query.limit ?? 20;
+        
         const [data, total] = await Promise.all([
             this.prisma.appointment.findMany({
                 where,
+                skip: (page - 1) * limit,
+                take: limit,
+                orderBy: { startTime: 'asc' },
                 include: {
-                    patient: { select: { id: true, firstName: true, lastName: true, phone: true } },
+                    patient: { select: { id: true, firstName: true, lastName: true } },
                     dentist: { select: { id: true, firstName: true, lastName: true } },
                 },
-                skip: query.skip,
-                take: query.limit,
-                orderBy: { startTime: 'asc' },
             }),
             this.prisma.appointment.count({ where }),
         ]);
 
-        return new PaginatedResponseDto(data, total, query.page!, query.limit!);
-    }
-
-    async getCalendar(query: AppointmentQueryDto) {
-        const where: any = {};
-        if (query.startDate && query.endDate) {
-            where.startTime = { gte: new Date(query.startDate) };
-            where.endTime = { lte: new Date(query.endDate) };
-        }
-        if (query.dentistId) where.dentistId = query.dentistId;
-        if (query.status) where.status = query.status;
-
-        return this.prisma.appointment.findMany({
-            where,
-            include: {
-                patient: { select: { id: true, firstName: true, lastName: true } },
-                dentist: { select: { id: true, firstName: true, lastName: true } },
-            },
-            orderBy: { startTime: 'asc' },
-        });
+        return {
+            data,
+            meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+        };
     }
 
     async findOne(id: string) {
@@ -76,6 +97,9 @@ export class AppointmentsService {
     }
 
     async create(dto: CreateAppointmentDto) {
+        console.log(`[CREATE] Received dto.startTime: ${dto.startTime}`);
+        console.log(`[CREATE] Parsed Date: ${new Date(dto.startTime).toISOString()}`);
+        
         // Verify patient exists
         const patient = await this.prisma.patient.findUnique({
             where: { id: dto.patientId },
@@ -111,96 +135,183 @@ export class AppointmentsService {
         }
 
         try {
-            if (!dto.isRecurring) {
-                const appointment = await this.prisma.appointment.create({
-                    data: {
-                        ...dto,
-                        startTime: new Date(dto.startTime),
-                        endTime: new Date(dto.endTime),
-                    },
-                    include: {
-                        patient: { select: { id: true, firstName: true, lastName: true } },
-                        dentist: { select: { id: true, firstName: true, lastName: true } },
-                    },
-                });
+            const appointment = await this.prisma.appointment.create({
+                data: {
+                    patientId: dto.patientId,
+                    dentistId: dto.dentistId,
+                    title: dto.title,
+                    description: dto.description,
+                    startTime: new Date(dto.startTime),
+                    endTime: new Date(dto.endTime),
+                    type: dto.type,
+                    notes: dto.notes,
+                },
+                include: {
+                    patient: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+                    dentist: { select: { id: true, firstName: true, lastName: true } },
+                },
+            });
 
-                // Notify dentist about new appointment
-                await this.notifyAppointmentCreated(appointment);
+            // Notify BOTH dentist AND patient
+            await this.notifyAppointmentCreated(appointment);
 
-                return appointment;
-            }
-
-            // Handle Recurring Appointments
-            const appointments = [];
-            const start = new Date(dto.startTime);
-            const end = new Date(dto.endTime);
-            const stopAt = dto.recurringEndDate ? new Date(dto.recurringEndDate) : new Date(start.getTime() + 90 * 24 * 60 * 60 * 1000); // Default 90 days
-            const groupId = crypto.randomUUID();
-
-            let currentStart = new Date(start);
-            let currentEnd = new Date(end);
-
-            while (currentStart <= stopAt) {
-                appointments.push({
-                    ...dto,
-                    startTime: new Date(currentStart),
-                    endTime: new Date(currentEnd),
-                    isRecurring: true,
-                    recurringGroupId: groupId,
-                });
-
-                // Advance time based on pattern
-                switch (dto.recurringPattern) {
-                    case 'daily':
-                        currentStart.setDate(currentStart.getDate() + 1);
-                        currentEnd.setDate(currentEnd.getDate() + 1);
-                        break;
-                    case 'weekly':
-                        currentStart.setDate(currentStart.getDate() + 7);
-                        currentEnd.setDate(currentEnd.getDate() + 7);
-                        break;
-                    case 'biweekly':
-                        currentStart.setDate(currentStart.getDate() + 14);
-                        currentEnd.setDate(currentEnd.getDate() + 14);
-                        break;
-                    case 'monthly':
-                        currentStart.setMonth(currentStart.getMonth() + 1);
-                        currentEnd.setMonth(currentEnd.getMonth() + 1);
-                        break;
-                    default:
-                        currentStart.setDate(currentStart.getDate() + 7); // Default weekly
-                        currentEnd.setDate(currentEnd.getDate() + 7);
-                }
-            }
-
-            // Bulk create might not return nested includes easily, so we loop or just create first and return
-            // For now, let's just use createMany or loop for simple implementation
-            await this.prisma.appointment.createMany({ data: appointments });
-
-            return { message: `${appointments.length} recurring appointments created`, groupId };
+            return appointment;
         } catch (error) {
             throw new BadRequestException('Could not create appointment: ' + error.message);
         }
     }
 
+    async createRecurring(dto: CreateAppointmentDto) {
+        const { isRecurring, recurringPattern, recurringEndDate, ...baseData } = dto;
+
+        if (!isRecurring || !recurringPattern || !recurringEndDate) {
+            throw new BadRequestException('Invalid recurring appointment data');
+        }
+
+        // Verify patient exists
+        const patient = await this.prisma.patient.findUnique({
+            where: { id: dto.patientId },
+        });
+
+        if (!patient) {
+            throw new NotFoundException(`Patient with ID "${dto.patientId}" not found`);
+        }
+
+        // Verify dentist exists
+        const dentist = await this.prisma.user.findUnique({
+            where: { id: dto.dentistId },
+        });
+
+        if (!dentist) {
+            throw new NotFoundException(`Dentist with ID "${dto.dentistId}" not found`);
+        }
+
+        // Generate a group ID for this recurring series
+        const groupId = crypto.randomUUID();
+
+        const appointments = [];
+        const endDate = new Date(recurringEndDate);
+        let currentStart = new Date(dto.startTime);
+        let currentEnd = new Date(dto.endTime);
+
+        while (currentStart <= endDate) {
+            // Check for conflict
+            const conflict = await this.prisma.appointment.findFirst({
+                where: {
+                    dentistId: dto.dentistId,
+                    status: { notIn: ['CANCELLED'] },
+                    OR: [
+                        { startTime: { lte: currentStart }, endTime: { gt: currentStart } },
+                        { startTime: { lt: currentEnd }, endTime: { gte: currentEnd } },
+                    ],
+                },
+            });
+
+            if (!conflict) {
+                appointments.push({
+                    patientId: dto.patientId,
+                    dentistId: dto.dentistId,
+                    title: dto.title,
+                    description: dto.description,
+                    startTime: currentStart,
+                    endTime: currentEnd,
+                    type: dto.type,
+                    notes: dto.notes,
+                    isRecurring: true,
+                    recurringPattern,
+                    recurringGroupId: groupId,
+                    recurringEndDate: new Date(recurringEndDate),
+                });
+            }
+
+            // Advance date based on pattern
+            switch (recurringPattern) {
+                case 'daily':
+                    currentStart.setDate(currentStart.getDate() + 1);
+                    currentEnd.setDate(currentEnd.getDate() + 1);
+                    break;
+                case 'weekly':
+                    currentStart.setDate(currentStart.getDate() + 7);
+                    currentEnd.setDate(currentEnd.getDate() + 7);
+                    break;
+                case 'biweekly':
+                    currentStart.setDate(currentStart.getDate() + 14);
+                    currentEnd.setDate(currentEnd.getDate() + 14);
+                    break;
+                case 'monthly':
+                    currentStart.setMonth(currentStart.getMonth() + 1);
+                    currentEnd.setMonth(currentEnd.getMonth() + 1);
+                    break;
+                default:
+                    currentStart.setDate(currentStart.getDate() + 7); // Default weekly
+                    currentEnd.setDate(currentEnd.getDate() + 7);
+            }
+        }
+
+        // Bulk create might not return nested includes easily, so we loop or just create first and return
+        // For now, let's just use createMany or loop for simple implementation
+        await this.prisma.appointment.createMany({ data: appointments });
+        console.log(`[Recurring] Created ${appointments.length} appointments in series ${groupId}`);
+
+        // Notify for the FIRST one as a confirmation of the series
+        const firstApt = await this.prisma.appointment.findFirst({
+            where: { recurringGroupId: groupId },
+            include: {
+                patient: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+                dentist: { select: { id: true, firstName: true, lastName: true } },
+            },
+            orderBy: { startTime: 'asc' },
+        });
+        console.log(`[Recurring] First appointment in series: ${firstApt?.id}, patient: ${firstApt?.patient?.email}`);
+        if (firstApt) await this.notifyAppointmentCreated(firstApt);
+
+        return { message: `${appointments.length} recurring appointments created`, groupId };
+    }
+
     async update(id: string, dto: UpdateAppointmentDto) {
+        console.log(`[UPDATE] Received update request for id=${id}`);
+        console.log(`[UPDATE] Raw dto:`, JSON.stringify(dto, null, 2));
+
         // Get old appointment data before updating
         const oldAppointment = await this.findOne(id);
+        console.log(`[UPDATE] Found appointment:`, oldAppointment.id);
 
-        const data: any = { ...dto };
-        if (dto.startTime) data.startTime = new Date(dto.startTime);
-        if (dto.endTime) data.endTime = new Date(dto.endTime);
+        // Whitelist allowed fields to prevent "property should not exist" errors
+        const allowedFields = [
+            'patientId', 'dentistId', 'title', 'description',
+            'startTime', 'endTime', 'type', 'notes',
+            'status', 'isRecurring', 'recurringPattern', 'recurringEndDate'
+        ];
+        
+        const dtoAny = dto as any;
+        const data: any = {};
+        for (const key of allowedFields) {
+            if (dtoAny[key] !== undefined) {
+                data[key] = dtoAny[key];
+            }
+        }
+        
+        console.log(`[UPDATE] Filtered data keys:`, Object.keys(data));
+        
+        try {
+            if (data.startTime) data.startTime = new Date(data.startTime);
+            if (data.endTime) data.endTime = new Date(data.endTime);
+            if (data.recurringEndDate) data.recurringEndDate = new Date(data.recurringEndDate);
+        } catch (dateError) {
+            console.error(`[UPDATE] Date parsing error:`, dateError.message);
+            throw new BadRequestException('Invalid date format: ' + dateError.message);
+        }
 
         const appointment = await this.prisma.appointment.update({
             where: { id },
             data,
             include: {
-                patient: { select: { id: true, firstName: true, lastName: true } },
+                patient: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
                 dentist: { select: { id: true, firstName: true, lastName: true } },
             },
         });
 
-        // Notify dentist about appointment update
+        // Notify BOTH dentist AND patient if status changed or rescheduled
         await this.notifyAppointmentUpdated(appointment, oldAppointment);
 
         return appointment;
@@ -208,24 +319,62 @@ export class AppointmentsService {
 
     async remove(id: string) {
         const appointment = await this.findOne(id);
+        
+        // Notify about cancellation
+        const timeStr = this.formatTime(appointment.startTime);
+        const dateStr = this.formatDate(appointment.startTime);
+        
+        await this.notificationsService.createAppointmentNotification(
+            appointment.dentistId,
+            appointment.patientId,
+            'Appointment Cancelled',
+            `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} on ${dateStr} at ${timeStr} has been cancelled`,
+            'Appointment Cancelled',
+            `Your appointment with Dr. ${appointment.dentist?.firstName} ${appointment.dentist?.lastName} on ${dateStr} at ${timeStr} has been cancelled`,
+            {
+                startTime: appointment.startTime,
+                dentistName: `${appointment.dentist?.firstName} ${appointment.dentist?.lastName}`,
+                patientName: `${appointment.patient?.firstName} ${appointment.patient?.lastName}`,
+                patientEmail: appointment.patient?.email ?? undefined,
+                patientPhone: appointment.patient?.phone ?? undefined,
+            }
+        );
 
-        await this.prisma.appointment.delete({
-            where: { id },
-        });
+        return this.prisma.appointment.delete({ where: { id } });
+    }
 
-        // Notify both dentist and patient about cancellation/deletion
-        if (appointment) {
-            await this.notificationsService.createAppointmentNotification(
-                appointment.dentistId,
-                appointment.patientId,
-                'Appointment Deleted',
-                `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} has been permanently removed`,
-                'Appointment Cancelled',
-                'Your appointment has been removed from the schedule',
-            );
+    async getCalendar(query: AppointmentQueryDto) {
+        const where: any = {};
+        if (query.startDate && query.endDate) {
+            const startDate = new Date(query.startDate);
+            const endDate = new Date(query.endDate);
+            where.OR = [
+                {
+                    startTime: { gte: startDate, lt: endDate },
+                },
+                {
+                    endTime: { gt: startDate, lte: endDate },
+                },
+                {
+                    startTime: { lte: startDate },
+                    endTime: { gte: endDate },
+                },
+            ];
         }
+        if (query.dentistId) {
+            console.log(`[CalendarFetch] Filtering by dentistId: ${query.dentistId}`);
+            where.dentistId = query.dentistId;
+        }
+        if (query.status) where.status = query.status;
 
-        return { message: 'Appointment deleted successfully' };
+        return this.prisma.appointment.findMany({
+            where,
+            include: {
+                patient: { select: { id: true, firstName: true, lastName: true } },
+                dentist: { select: { id: true, firstName: true, lastName: true } },
+            },
+            orderBy: { startTime: 'asc' },
+        });
     }
 
     async getTodayCount() {
@@ -237,7 +386,7 @@ export class AppointmentsService {
         return this.prisma.appointment.count({
             where: {
                 startTime: { gte: today, lt: tomorrow },
-                status: { notIn: ['CANCELLED'] },
+                status: { notIn: ['CANCELLED', 'NO_SHOW'] },
             },
         });
     }
@@ -262,11 +411,7 @@ export class AppointmentsService {
         console.log(`[Reminders] Found ${upcoming.length} appointments for tomorrow. Creating notifications...`);
 
         for (const apt of upcoming) {
-            const timeStr = apt.startTime.toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            });
+            const timeStr = this.formatTime(apt.startTime);
 
             // Notify BOTH dentist AND patient
             await this.notificationsService.createAppointmentNotification(
@@ -283,18 +428,11 @@ export class AppointmentsService {
     }
 
     private async notifyAppointmentCreated(appointment: any) {
-        const timeStr = appointment.startTime.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
-        const dateStr = appointment.startTime.toLocaleDateString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric'
-        });
+        console.log("=> notifyAppointmentCreated triggered. Patient Email:", appointment.patient?.email, "Patient Phone:", appointment.patient?.phone);
+        const timeStr = this.formatTime(appointment.startTime);
+        const dateStr = this.formatDate(appointment.startTime);
 
-        // Notify BOTH dentist AND patient
+        // Notify BOTH dentist AND patient with email
         await this.notificationsService.createAppointmentNotification(
             appointment.dentistId,
             appointment.patientId,
@@ -302,20 +440,19 @@ export class AppointmentsService {
             `New appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} on ${dateStr} at ${timeStr}`,
             'Appointment Confirmed',
             `Your appointment with Dr. ${appointment.dentist?.firstName} ${appointment.dentist?.lastName} has been scheduled for ${dateStr} at ${timeStr}`,
+            {
+                startTime: appointment.startTime,
+                dentistName: `${appointment.dentist?.firstName} ${appointment.dentist?.lastName}`,
+                patientName: `${appointment.patient?.firstName} ${appointment.patient?.lastName}`,
+                patientEmail: appointment.patient?.email ?? undefined,
+                patientPhone: appointment.patient?.phone ?? undefined,
+            }
         );
     }
 
     private async notifyAppointmentUpdated(appointment: any, oldData: any) {
-        const timeStr = appointment.startTime.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
-        const dateStr = appointment.startTime.toLocaleDateString('en-US', {
-            weekday: 'short',
-            month: 'short',
-            day: 'numeric'
-        });
+        const timeStr = this.formatTime(appointment.startTime);
+        const dateStr = this.formatDate(appointment.startTime);
 
         let dentistMessage = '';
         let patientMessage = '';
@@ -340,7 +477,7 @@ export class AppointmentsService {
             patientMessage = 'Your appointment details have been updated';
         }
 
-        // Notify BOTH dentist AND patient
+        // Notify BOTH dentist AND patient with email for updates
         await this.notificationsService.createAppointmentNotification(
             appointment.dentistId,
             appointment.patientId,
@@ -348,6 +485,13 @@ export class AppointmentsService {
             dentistMessage,
             patientTitle,
             patientMessage,
+            {
+                startTime: appointment.startTime,
+                dentistName: `${appointment.dentist?.firstName} ${appointment.dentist?.lastName}`,
+                patientName: `${appointment.patient?.firstName} ${appointment.patient?.lastName}`,
+                patientEmail: appointment.patient?.email ?? undefined,
+                patientPhone: appointment.patient?.phone ?? undefined,
+            }
         );
     }
 }

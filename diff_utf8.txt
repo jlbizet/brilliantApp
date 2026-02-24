@@ -1,0 +1,1149 @@
+﻿diff --git a/backend/.env.example b/backend/.env.example
+index ab4bcf3..8580246 100644
+--- a/backend/.env.example
++++ b/backend/.env.example
+@@ -14,12 +14,59 @@ NODE_ENV="development"
+ # Frontend URL (for CORS)
+ FRONTEND_URL="http://localhost:5173"
+ 
+-# Optional: Email Configuration (for notifications)
+-# SMTP_HOST="smtp.gmail.com"
+-# SMTP_PORT=587
+-# SMTP_USER="your-email@gmail.com"
+-# SMTP_PASS="your-app-password"
++# ============================================
++# EMAIL CONFIGURATION (Resend - Free Tier)
++# ============================================
++# Get your API key from: https://resend.com/
++# Free tier: 3,000 emails/month (much better than SendGrid!)
++# 1. Sign up at https://resend.com/
++# 2. Add your domain or verify a single email address
++# 3. Create an API key
++# 4. Use the API key below
++RESEND_API_KEY="re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
++EMAIL_FROM="onboarding@resend.dev"  # Use this for testing, or your verified domain
++EMAIL_FROM_NAME="Brilliant Dental Clinic"
++ENABLE_EMAIL_NOTIFICATIONS="false"  # Set to "true" to enable email notifications
+ 
+-# Optional: File Upload Configuration
++# ============================================
++# SMS CONFIGURATION (Twilio - Trial Account)
++# ============================================
++# Sign up at: https://www.twilio.com/try-twilio
++# Free trial includes ~$15 credit
++TWILIO_ACCOUNT_SID="your_twilio_account_sid"
++TWILIO_AUTH_TOKEN="your_twilio_auth_token"
++TWILIO_PHONE_NUMBER="+1234567890"  # Your Twilio phone number
++ENABLE_SMS_NOTIFICATIONS="false"  # Set to "true" to enable SMS notifications
++
++# Notification Timing Settings
++EMAIL_APPOINTMENT_REMINDER_HOURS=24  # Send email reminder X hours before appointment
++SMS_APPOINTMENT_REMINDER_HOURS=2     # Send SMS reminder X hours before appointment
++
++# ============================================
++# OPTIONAL CONFIGURATION
++# ============================================
++# File Upload Configuration
+ # UPLOAD_DIR="./uploads"
+-# MAX_FILE_SIZE=10485760  # 10MB in bytes
++# MAX_FILE_SIZE=10485760 # 10MB in bytes
++
++# Redis Configuration (for future Bull queue)
++# REDIS_URL="redis://localhost:6379"
++
++# ============================================
++# SETUP INSTRUCTIONS
++# ============================================
++# 1. Copy this file to .env: cp .env.example .env
++# 2. Fill in your actual values
++# 3. For Email:
++#    - Sign up at Resend (https://resend.com/) - it's free with 3,000 emails/month!
++#    - Verify your email address or add a domain
++#    - Create an API key (starts with "re_")
++#    - Add the key to RESEND_API_KEY
++#    - Set ENABLE_EMAIL_NOTIFICATIONS="true"
++# 4. For SMS:
++#    - Sign up at Twilio (free trial)
++#    - Get Account SID and Auth Token from dashboard
++#    - Buy/verify a phone number
++#    - Add the values above
++#    - Set ENABLE_SMS_NOTIFICATIONS="true"
++# 5. Restart the backend server
+diff --git a/backend/package.json b/backend/package.json
+index a20cfad..2a56acb 100644
+--- a/backend/package.json
++++ b/backend/package.json
+@@ -37,8 +37,10 @@
+         "passport": "^0.7.0",
+         "passport-jwt": "^4.0.1",
+         "reflect-metadata": "^0.2.1",
++        "resend": "^6.9.2",
+         "rxjs": "^7.8.1",
+         "socket.io": "^4.8.3",
++        "twilio": "^5.12.2",
+         "uuid": "^9.0.0"
+     },
+     "devDependencies": {
+diff --git a/backend/prisma/schema.prisma b/backend/prisma/schema.prisma
+index ff9d000..af39f5d 100644
+--- a/backend/prisma/schema.prisma
++++ b/backend/prisma/schema.prisma
+@@ -115,38 +115,45 @@ model User {
+ // ============================================
+ 
+ model Patient {
+-  id              String    @id @default(uuid())
+-  firstName       String
+-  lastName        String
+-  email           String?   @unique
+-  phone           String
+-  dateOfBirth     DateTime
+-  gender          Gender    @default(PREFER_NOT_TO_SAY)
+-  address         String?
+-  city            String?
+-  state           String?
+-  zipCode         String?
++  id String @id @default(uuid())
++  firstName String
++  lastName String
++  email String? @unique
++  phone String
++  dateOfBirth DateTime
++  gender Gender @default(PREFER_NOT_TO_SAY)
++  address String?
++  city String?
++  state String?
++  zipCode String?
+   emergencyContact String?
+-  emergencyPhone  String?
++  emergencyPhone String?
+   insuranceProvider String?
+   insurancePolicyNumber String?
+-  insuranceGroupNumber  String?
+-  notes           String?
+-  isActive        Boolean   @default(true)
+-  createdAt       DateTime  @default(now())
+-  updatedAt       DateTime  @updatedAt
+-
+-  medicalHistory  MedicalHistory[]
+-  allergies       Allergy[]
+-  appointments    Appointment[]
+-  treatmentPlans  TreatmentPlan[]
+-  invoices        Invoice[]
+-  documents       Document[]
+-  prescriptions   Prescription[]
++  insuranceGroupNumber String?
++  notes String?
++  isActive Boolean @default(true)
++  createdAt DateTime @default(now())
++  updatedAt DateTime @updatedAt
++
++  // Notification Preferences
++  emailNotificationsEnabled Boolean @default(true)
++  smsNotificationsEnabled Boolean @default(true)
++  appointmentRemindersEnabled Boolean @default(true)
++  paymentRemindersEnabled Boolean @default(true)
++  marketingEmailsEnabled Boolean @default(false)
++
++  medicalHistory MedicalHistory[]
++  allergies Allergy[]
++  appointments Appointment[]
++  treatmentPlans TreatmentPlan[]
++  invoices Invoice[]
++  documents Document[]
++  prescriptions Prescription[]
+   waitlistEntries WaitlistEntry[]
+-  chatSessions    ChatSession[]
+-  odontogram      Odontogram?
+-  notifications   Notification[]
++  chatSessions ChatSession[]
++  odontogram Odontogram?
++  notifications Notification[]
+ 
+   @@index([lastName, firstName])
+   @@index([phone])
+diff --git a/backend/src/modules/appointments/appointments.service.ts b/backend/src/modules/appointments/appointments.service.ts
+index c7939d9..de456bf 100644
+--- a/backend/src/modules/appointments/appointments.service.ts
++++ b/backend/src/modules/appointments/appointments.service.ts
+@@ -282,28 +282,35 @@ export class AppointmentsService {
+         }
+     }
+ 
+-    private async notifyAppointmentCreated(appointment: any) {
+-        const timeStr = appointment.startTime.toLocaleTimeString('en-US', {
+-            hour: '2-digit',
+-            minute: '2-digit',
+-            hour12: true
+-        });
+-        const dateStr = appointment.startTime.toLocaleDateString('en-US', {
+-            weekday: 'short',
+-            month: 'short',
+-            day: 'numeric'
+-        });
+-
+-        // Notify BOTH dentist AND patient
+-        await this.notificationsService.createAppointmentNotification(
+-            appointment.dentistId,
+-            appointment.patientId,
+-            'New Appointment Scheduled',
+-            `New appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} on ${dateStr} at ${timeStr}`,
+-            'Appointment Confirmed',
+-            `Your appointment with Dr. ${appointment.dentist?.firstName} ${appointment.dentist?.lastName} has been scheduled for ${dateStr} at ${timeStr}`,
+-        );
+-    }
++private async notifyAppointmentCreated(appointment: any) {
++    const timeStr = appointment.startTime.toLocaleTimeString('en-US', {
++      hour: '2-digit',
++      minute: '2-digit',
++      hour12: true
++    });
++    const dateStr = appointment.startTime.toLocaleDateString('en-US', {
++      weekday: 'short',
++      month: 'short',
++      day: 'numeric'
++    });
++
++    // Notify BOTH dentist AND patient with email/SMS
++    await this.notificationsService.createAppointmentNotification(
++      appointment.dentistId,
++      appointment.patientId,
++      'New Appointment Scheduled',
++      `New appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} on ${dateStr} at ${timeStr}`,
++      'Appointment Confirmed',
++      `Your appointment with Dr. ${appointment.dentist?.firstName} ${appointment.dentist?.lastName} has been scheduled for ${dateStr} at ${timeStr}`,
++      {
++        startTime: appointment.startTime,
++        dentistName: `${appointment.dentist?.firstName} ${appointment.dentist?.lastName}`,
++        patientName: `${appointment.patient?.firstName} ${appointment.patient?.lastName}`,
++        patientEmail: appointment.patient?.email,
++        patientPhone: appointment.patient?.phone,
++      }
++    );
++  }
+ 
+     private async notifyAppointmentUpdated(appointment: any, oldData: any) {
+         const timeStr = appointment.startTime.toLocaleTimeString('en-US', {
+@@ -340,14 +347,21 @@ export class AppointmentsService {
+             patientMessage = 'Your appointment details have been updated';
+         }
+ 
+-        // Notify BOTH dentist AND patient
+-        await this.notificationsService.createAppointmentNotification(
+-            appointment.dentistId,
+-            appointment.patientId,
+-            dentistTitle,
+-            dentistMessage,
+-            patientTitle,
+-            patientMessage,
+-        );
+-    }
++    // Notify BOTH dentist AND patient with email/SMS
++    await this.notificationsService.createAppointmentNotification(
++      appointment.dentistId,
++      appointment.patientId,
++      dentistTitle,
++      dentistMessage,
++      patientTitle,
++      patientMessage,
++      {
++        startTime: appointment.startTime,
++        dentistName: `${appointment.dentist?.firstName} ${appointment.dentist?.lastName}`,
++        patientName: `${appointment.patient?.firstName} ${appointment.patient?.lastName}`,
++        patientEmail: appointment.patient?.email,
++        patientPhone: appointment.patient?.phone,
++      }
++    );
++  }
+ }
+diff --git a/backend/src/modules/notifications/notifications.module.ts b/backend/src/modules/notifications/notifications.module.ts
+index edebd49..2afa79b 100644
+--- a/backend/src/modules/notifications/notifications.module.ts
++++ b/backend/src/modules/notifications/notifications.module.ts
+@@ -3,11 +3,13 @@ import { AuthModule } from '../auth/auth.module';
+ import { NotificationsController } from './notifications.controller';
+ import { NotificationsService } from './notifications.service';
+ import { NotificationGateway } from './notification.gateway';
++import { EmailService } from './email.service';
++import { SmsService } from './sms.service';
+ 
+ @Module({
+-    imports: [AuthModule],
+-    controllers: [NotificationsController],
+-    providers: [NotificationsService, NotificationGateway],
+-    exports: [NotificationsService, NotificationGateway],
++  imports: [AuthModule],
++  controllers: [NotificationsController],
++  providers: [NotificationsService, NotificationGateway, EmailService, SmsService],
++  exports: [NotificationsService, NotificationGateway, EmailService, SmsService],
+ })
+ export class NotificationsModule { }
+diff --git a/backend/src/modules/notifications/notifications.service.ts b/backend/src/modules/notifications/notifications.service.ts
+index 7948699..5cf5133 100644
+--- a/backend/src/modules/notifications/notifications.service.ts
++++ b/backend/src/modules/notifications/notifications.service.ts
+@@ -1,110 +1,495 @@
+-import { Injectable } from '@nestjs/common';
++import { Injectable, Logger } from '@nestjs/common';
+ import { PrismaService } from '../../prisma/prisma.service';
+ import { NotificationGateway } from './notification.gateway';
++import { EmailService } from './email.service';
++import { SmsService } from './sms.service';
++import { ConfigService } from '@nestjs/config';
++
++export interface CreateNotificationParams {
++  userId?: string;
++  recipientPatientId?: string;
++  title: string;
++  message: string;
++  type?: string;
++  sendRealtime?: boolean;
++  sendEmail?: boolean;
++  sendSms?: boolean;
++  metadata?: any;
++}
+ 
+ @Injectable()
+ export class NotificationsService {
+-    constructor(
+-        private prisma: PrismaService,
+-        private notificationGateway: NotificationGateway,
+-    ) { }
+-
+-    async findByUser(userId: string) {
+-        return this.prisma.notification.findMany({
+-            where: { userId },
+-            orderBy: { createdAt: 'desc' },
+-            take: 50,
+-        });
++  private readonly logger = new Logger(NotificationsService.name);
++  private emailEnabled: boolean;
++  private smsEnabled: boolean;
++
++  constructor(
++    private prisma: PrismaService,
++    private notificationGateway: NotificationGateway,
++    private emailService: EmailService,
++    private smsService: SmsService,
++    private configService: ConfigService,
++  ) {
++    this.emailEnabled = this.configService.get<string>('ENABLE_EMAIL_NOTIFICATIONS') === 'true';
++    this.smsEnabled = this.configService.get<string>('ENABLE_SMS_NOTIFICATIONS') === 'true';
++  }
++
++  async findByUser(userId: string) {
++    return this.prisma.notification.findMany({
++      where: { userId },
++      orderBy: { createdAt: 'desc' },
++      take: 50,
++    });
++  }
++
++  async getUnreadCount(userId: string) {
++    return this.prisma.notification.count({ where: { userId, isRead: false } });
++  }
++
++  async markAsRead(id: string) {
++    const notification = await this.prisma.notification.update({ where: { id }, data: { isRead: true } });
++    return notification;
++  }
++
++  async markAllRead(userId: string) {
++    await this.prisma.notification.updateMany({
++      where: { userId, isRead: false },
++      data: { isRead: true },
++    });
++    return { message: 'All notifications marked as read' };
++  }
++
++  /**
++   * Create a single notification and optionally send via WebSocket, Email, and SMS
++   */
++  async create(params: CreateNotificationParams) {
++    const data: any = {
++      title: params.title,
++      message: params.message,
++      type: params.type || 'GENERAL',
++      metadata: params.metadata || {},
++    };
++
++    if (params.userId) data.userId = params.userId;
++    if (params.recipientPatientId) data.recipientPatientId = params.recipientPatientId;
++
++    const notification = await this.prisma.notification.create({
++      data
++    });
++
++    // Send WebSocket notification
++    if (params.sendRealtime && params.userId) {
++      await this.notificationGateway.sendNotification(params.userId, notification);
+     }
+ 
+-    async getUnreadCount(userId: string) {
+-        return this.prisma.notification.count({ where: { userId, isRead: false } });
++    // Send Email notification
++    if (params.sendEmail && this.emailEnabled) {
++      await this.sendEmailNotification(notification, params.recipientPatientId || params.userId);
+     }
+ 
+-    async markAsRead(id: string) {
+-        const notification = await this.prisma.notification.update({ where: { id }, data: { isRead: true } });
+-        return notification;
++    // Send SMS notification
++    if (params.sendSms && this.smsEnabled) {
++      await this.sendSmsNotification(notification, params.recipientPatientId || params.userId);
+     }
+ 
+-    async markAllRead(userId: string) {
+-        await this.prisma.notification.updateMany({
+-            where: { userId, isRead: false },
+-            data: { isRead: true },
++    return notification;
++  }
++
++  /**
++   * Create multiple notifications at once
++   */
++  async createMultiple(notifications: Array<CreateNotificationParams>) {
++    const created = await Promise.all(notifications.map(notif =>
++      this.create({ ...notif, type: notif.type ?? 'GENERAL' })
++    ));
++    return created;
++  }
++
++  /**
++   * Create appointment notifications for dentist and patient with email/SMS
++   */
++  async createAppointmentNotification(
++    dentistId: string,
++    patientId: string,
++    dentistTitle: string,
++    dentistMessage: string,
++    patientTitle: string,
++    patientMessage: string,
++    appointmentData?: {
++      startTime: Date;
++      dentistName: string;
++      patientName: string;
++      patientEmail?: string;
++      patientPhone?: string;
++    },
++  ) {
++    const notifications: CreateNotificationParams[] = [
++      { userId: dentistId, title: dentistTitle, message: dentistMessage, type: 'APPOINTMENT_REMINDER', sendRealtime: true },
++      { recipientPatientId: patientId, title: patientTitle, message: patientMessage, type: 'APPOINTMENT_REMINDER' },
++    ];
++
++    // If we have appointment data and patient contact info, send email and SMS
++    if (appointmentData) {
++      const patientNotification: CreateNotificationParams = {
++        recipientPatientId: patientId,
++        title: patientTitle,
++        message: patientMessage,
++        type: 'APPOINTMENT_REMINDER',
++        sendRealtime: false,
++        sendEmail: !!appointmentData.patientEmail,
++        sendSms: !!appointmentData.patientPhone,
++      };
++
++      // Replace the patient notification with enhanced version
++      notifications[1] = patientNotification;
++
++      // Send appointment confirmation email
++      if (appointmentData.patientEmail && this.emailEnabled) {
++        await this.emailService.sendAppointmentConfirmation({
++          to: appointmentData.patientEmail,
++          patientName: appointmentData.patientName,
++          dentistName: appointmentData.dentistName,
++          appointmentDate: appointmentData.startTime,
++          appointmentTime: appointmentData.startTime.toLocaleTimeString('en-US', {
++            hour: '2-digit',
++            minute: '2-digit',
++            hour12: true,
++          }),
+         });
+-        return { message: 'All notifications marked as read' };
+-    }
++      }
+ 
+-    /**
+-     * Create a single notification and optionally send via WebSocket
+-     */
+-    async create(params: {
+-        userId?: string;
+-        recipientPatientId?: string;
+-        title: string;
+-        message: string;
+-        type?: string;
+-        sendRealtime?: boolean;
+-    }) {
+-        const data: any = {
+-            title: params.title,
+-            message: params.message,
+-            type: params.type || 'GENERAL',
+-        };
+-
+-        if (params.userId) data.userId = params.userId;
+-        if (params.recipientPatientId) data.recipientPatientId = params.recipientPatientId;
+-
+-        const notification = await this.prisma.notification.create({
+-            data
++      // Send appointment confirmation SMS
++      if (appointmentData.patientPhone && this.smsEnabled) {
++        await this.smsService.sendAppointmentConfirmation({
++          to: appointmentData.patientPhone,
++          patientName: appointmentData.patientName,
++          dentistName: appointmentData.dentistName,
++          appointmentDate: appointmentData.startTime,
++          appointmentTime: appointmentData.startTime.toLocaleTimeString('en-US', {
++            hour: '2-digit',
++            minute: '2-digit',
++            hour12: true,
++          }),
+         });
++      }
++    }
+ 
+-        if (params.sendRealtime && params.userId) {
+-            await this.notificationGateway.sendNotification(params.userId, notification);
+-        }
+-        return notification;
++    return this.createMultiple(notifications);
++  }
++
++  /**
++   * Send appointment reminder email and SMS
++   */
++  async sendAppointmentReminder(
++    patientId: string,
++    patientEmail: string,
++    patientPhone: string | null,
++    patientName: string,
++    dentistName: string,
++    appointmentTime: Date,
++  ) {
++    const timeStr = appointmentTime.toLocaleTimeString('en-US', {
++      hour: '2-digit',
++      minute: '2-digit',
++      hour12: true,
++    });
++
++    // Send Email reminder
++    if (this.emailEnabled && patientEmail) {
++      await this.emailService.sendAppointmentReminder({
++        to: patientEmail,
++        patientName,
++        dentistName,
++        appointmentDate: appointmentTime,
++        appointmentTime: timeStr,
++      });
++      this.logger.log(`Appointment reminder email sent to ${patientEmail}`);
++    }
++
++    // Send SMS reminder
++    if (this.smsEnabled && patientPhone) {
++      await this.smsService.sendAppointmentReminder({
++        to: patientPhone,
++        patientName,
++        dentistName,
++        appointmentDate: appointmentTime,
++        appointmentTime: timeStr,
++      });
++      this.logger.log(`Appointment reminder SMS sent to ${patientPhone}`);
++    }
++
++    // Create in-app notification
++    await this.create({
++      recipientPatientId: patientId,
++      title: 'Appointment Reminder',
++      message: `Reminder: Your appointment with Dr. ${dentistName} is tomorrow at ${timeStr}`,
++      type: 'APPOINTMENT_REMINDER',
++      sendRealtime: false,
++    });
++  }
++
++  /**
++   * Send invoice notification via email and SMS
++   */
++  async sendInvoiceNotification(
++    patientId: string,
++    patientEmail: string,
++    patientPhone: string | null,
++    patientName: string,
++    invoiceNumber: string,
++    amount: number,
++    dueDate: Date,
++  ) {
++    // Send Email notification
++    if (this.emailEnabled && patientEmail) {
++      await this.emailService.sendInvoiceNotification({
++        to: patientEmail,
++        patientName,
++        invoiceNumber,
++        amount,
++        dueDate,
++      });
++      this.logger.log(`Invoice notification email sent to ${patientEmail}`);
++    }
++
++    // Send SMS notification
++    if (this.smsEnabled && patientPhone) {
++      await this.smsService.sendInvoiceReminder({
++        to: patientPhone,
++        patientName,
++        invoiceNumber,
++        amount,
++        dueDate,
++      });
++      this.logger.log(`Invoice reminder SMS sent to ${patientPhone}`);
++    }
++
++    // Create in-app notification
++    await this.create({
++      recipientPatientId: patientId,
++      title: 'New Invoice Available',
++      message: `Invoice #${invoiceNumber} for $${amount.toFixed(2)} is due on ${dueDate.toLocaleDateString()}`,
++      type: 'PAYMENT_DUE',
++      sendRealtime: false,
++    });
++  }
++
++  /**
++   * Send welcome notification to new patient
++   */
++  async sendWelcomeNotification(
++    patientId: string,
++    patientEmail: string,
++    patientPhone: string | null,
++    patientName: string,
++  ) {
++    // Send welcome email
++    if (this.emailEnabled && patientEmail) {
++      await this.emailService.sendWelcomeEmail({
++        to: patientEmail,
++        patientName,
++      });
++      this.logger.log(`Welcome email sent to ${patientEmail}`);
++    }
++
++    // Send welcome SMS
++    if (this.smsEnabled && patientPhone) {
++      await this.smsService.sendWelcomeSms({
++        to: patientPhone,
++        patientName,
++      });
++      this.logger.log(`Welcome SMS sent to ${patientPhone}`);
++    }
++
++    // Create in-app notification
++    await this.create({
++      recipientPatientId: patientId,
++      title: 'Welcome!',
++      message: 'Welcome to Brilliant Dental Clinic! You can now book appointments online and access your records.',
++      type: 'SYSTEM',
++      sendRealtime: false,
++    });
++  }
++
++  /**
++   * Send treatment completion notification
++   */
++  async sendTreatmentCompleteNotification(
++    patientId: string,
++    patientEmail: string,
++    patientPhone: string | null,
++    patientName: string,
++    treatmentName: string,
++    followUpInstructions?: string,
++  ) {
++    // Send SMS notification
++    if (this.smsEnabled && patientPhone) {
++      await this.smsService.sendTreatmentComplete({
++        to: patientPhone,
++        patientName,
++        treatmentName,
++        followUpInstructions,
++      });
++      this.logger.log(`Treatment complete SMS sent to ${patientPhone}`);
+     }
+ 
+-    /**
+-     * Create multiple notifications at once
+-     */
+-    async createMultiple(notifications: Array<{ userId?: string; recipientPatientId?: string; title: string; message: string; type?: string }>) {
+-        const created = await Promise.all(notifications.map(notif =>
+-            this.create({ userId: notif.userId, recipientPatientId: notif.recipientPatientId, title: notif.title, message: notif.message, type: notif.type ?? 'GENERAL' })
+-        ));
+-        return created;
++    // Create in-app notification
++    await this.create({
++      recipientPatientId: patientId,
++      title: 'Treatment Complete',
++      message: `Your ${treatmentName} treatment is complete. ${followUpInstructions || 'Please follow any post-treatment instructions.'}`,
++      type: 'TREATMENT_UPDATE',
++      sendRealtime: true,
++    });
++  }
++
++  /**
++   * Send password reset email
++   */
++  async sendPasswordResetEmail(
++    email: string,
++    name: string,
++    resetToken: string,
++    resetUrl: string,
++  ) {
++    if (!this.emailEnabled) {
++      this.logger.warn('Email service not enabled. Cannot send password reset.');
++      return false;
+     }
+ 
+-    /**
+-     * Create appointment notifications for dentist and patient
+-     */
+-    async createAppointmentNotification(
+-        dentistId: string,
+-        patientId: string,
+-        dentistTitle: string,
+-        dentistMessage: string,
+-        patientTitle: string,
+-        patientMessage: string,
+-    ) {
+-        return this.createMultiple([
+-            { userId: dentistId, title: dentistTitle, message: dentistMessage, type: 'APPOINTMENT_REMINDER' },
+-            { recipientPatientId: patientId, title: patientTitle, message: patientMessage, type: 'APPOINTMENT_REMINDER' }
+-        ]);
++    const success = await this.emailService.sendPasswordReset({
++      to: email,
++      patientName: name,
++      resetToken,
++      resetUrl,
++    });
++
++    if (success) {
++      this.logger.log(`Password reset email sent to ${email}`);
++    }
++
++    return success;
++  }
++
++  /**
++   * Helper: Send email notification
++   */
++  private async sendEmailNotification(notification: any, recipientId?: string) {
++    if (!recipientId) return;
++
++    try {
++      // Get patient email if recipient is a patient
++      let email: string | null = null;
++      let name: string | null = null;
++
++      if (notification.recipientPatientId) {
++        const patient = await this.prisma.patient.findUnique({
++          where: { id: notification.recipientPatientId },
++          select: { email: true, firstName: true, lastName: true },
++        });
++        if (patient) {
++          email = patient.email;
++          name = `${patient.firstName} ${patient.lastName}`;
++        }
++      }
++
++      if (email) {
++        await this.emailService.sendEmail({
++          to: email,
++          subject: notification.title,
++          html: this.getGenericEmailTemplate({
++            title: notification.title,
++            message: notification.message,
++            name,
++          }),
++        });
++        this.logger.log(`Email sent to ${email}`);
++      }
++    } catch (error) {
++      this.logger.error('Failed to send email notification:', error.message);
+     }
++  }
++
++  /**
++   * Helper: Send SMS notification
++   */
++  private async sendSmsNotification(notification: any, recipientId?: string) {
++    if (!recipientId) return;
+ 
+-    /**
+-     * Delete old read notifications (for cleanup)
+-     */
+-    async cleanupOldNotifications(daysOld: number = 30) {
+-        const cutoffDate = new Date();
+-        cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+-
+-        const result = await this.prisma.notification.deleteMany({
+-            where: {
+-                isRead: true,
+-                createdAt: { lt: cutoffDate },
+-            },
++    try {
++      // Get patient phone if recipient is a patient
++      let phone: string | null = null;
++
++      if (notification.recipientPatientId) {
++        const patient = await this.prisma.patient.findUnique({
++          where: { id: notification.recipientPatientId },
++          select: { phone: true },
+         });
++        if (patient) {
++          phone = patient.phone;
++        }
++      }
+ 
+-        return { deleted: result.count };
++      if (phone) {
++        await this.smsService.sendSms({
++          to: phone,
++          message: `${notification.title}: ${notification.message}`,
++        });
++        this.logger.log(`SMS sent to ${phone}`);
++      }
++    } catch (error) {
++      this.logger.error('Failed to send SMS notification:', error.message);
+     }
++  }
++
++  /**
++   * Generic email template
++   */
++  private getGenericEmailTemplate(params: {
++    title: string;
++    message: string;
++    name?: string | null;
++  }): string {
++    return `
++      <!DOCTYPE html>
++      <html>
++      <head>
++        <meta charset="UTF-8">
++        <meta name="viewport" content="width=device-width, initial-scale=1.0">
++        <title>${params.title}</title>
++      </head>
++      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
++        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
++          <h1 style="color: white; margin: 0; font-size: 24px;">Brilliant Dental</h1>
++        </div>
++        <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
++          <h2 style="color: #667eea; margin-top: 0;">${params.title}</h2>
++          ${params.name ? `<p>Hello ${params.name},</p>` : ''}
++          <p>${params.message}</p>
++          <p style="margin-top: 30px; font-size: 12px; color: #666;">
++            This is an automated message from Brilliant Dental Clinic.<br>
++            Please do not reply to this email.
++          </p>
++        </div>
++      </body>
++      </html>
++    `;
++  }
++
++  /**
++   * Delete old read notifications (for cleanup)
++   */
++  async cleanupOldNotifications(daysOld: number = 30) {
++    const cutoffDate = new Date();
++    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
++
++    const result = await this.prisma.notification.deleteMany({
++      where: {
++        isRead: true,
++        createdAt: { lt: cutoffDate },
++      },
++    });
++
++    return { deleted: result.count };
++  }
+ }
+diff --git a/docker-compose.yml b/docker-compose.yml
+index 0c0f8af..d25ddeb 100644
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -57,6 +57,16 @@ services:
+       JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-7d}
+       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+       REDIS_URL: redis://redis:6379
++      # Email Configuration (Resend)
++      RESEND_API_KEY: ${RESEND_API_KEY}
++      EMAIL_FROM: ${EMAIL_FROM:-onboarding@resend.dev}
++      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Brilliant Dental Clinic}
++      ENABLE_EMAIL_NOTIFICATIONS: ${ENABLE_EMAIL_NOTIFICATIONS:-true}
++      # SMS Configuration (Twilio)
++      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
++      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
++      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
++      ENABLE_SMS_NOTIFICATIONS: ${ENABLE_SMS_NOTIFICATIONS:-true}
+     depends_on:
+       postgres:
+         condition: service_healthy
+diff --git a/package-lock.json b/package-lock.json
+index ba94d8e..1694c34 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -38,8 +38,10 @@
+         "passport": "^0.7.0",
+         "passport-jwt": "^4.0.1",
+         "reflect-metadata": "^0.2.1",
++        "resend": "^6.9.2",
+         "rxjs": "^7.8.1",
+         "socket.io": "^4.8.3",
++        "twilio": "^5.12.2",
+         "uuid": "^9.0.0"
+       },
+       "devDependencies": {
+@@ -2627,13 +2629,13 @@
+       "version": "5.22.0",
+       "resolved": "https://registry.npmjs.org/@prisma/debug/-/debug-5.22.0.tgz",
+       "integrity": "sha512-AUt44v3YJeggO2ZU5BkXI7M4hu9BF2zzH2iF2V5pyXT/lRTyWiElZ7It+bRH1EshoMRxHgpYg4VB6rCM+mG5jQ==",
+-      "dev": true
++      "devOptional": true
+     },
+     "node_modules/@prisma/engines": {
+       "version": "5.22.0",
+       "resolved": "https://registry.npmjs.org/@prisma/engines/-/engines-5.22.0.tgz",
+       "integrity": "sha512-UNjfslWhAt06kVL3CjkuYpHAWSO6L4kDCVPegV6itt7nD1kSJavd3vhgAEhjglLJJKEdJ7oIqDJ+yHk6qO8gPA==",
+-      "dev": true,
++      "devOptional": true,
+       "hasInstallScript": true,
+       "dependencies": {
+         "@prisma/debug": "5.22.0",
+@@ -2646,13 +2648,13 @@
+       "version": "5.22.0-44.605197351a3c8bdd595af2d2a9bc3025bca48ea2",
+       "resolved": "https://registry.npmjs.org/@prisma/engines-version/-/engines-version-5.22.0-44.605197351a3c8bdd595af2d2a9bc3025bca48ea2.tgz",
+       "integrity": "sha512-2PTmxFR2yHW/eB3uqWtcgRcgAbG1rwG9ZriSvQw+nnb7c4uCr3RAcGMb6/zfE88SKlC1Nj2ziUvc96Z379mHgQ==",
+-      "dev": true
++      "devOptional": true
+     },
+     "node_modules/@prisma/fetch-engine": {
+       "version": "5.22.0",
+       "resolved": "https://registry.npmjs.org/@prisma/fetch-engine/-/fetch-engine-5.22.0.tgz",
+       "integrity": "sha512-bkrD/Mc2fSvkQBV5EpoFcZ87AvOgDxbG99488a5cexp5Ccny+UM6MAe/UFkUC0wLYD9+9befNOqGiIJhhq+HbA==",
+-      "dev": true,
++      "devOptional": true,
+       "dependencies": {
+         "@prisma/debug": "5.22.0",
+         "@prisma/engines-version": "5.22.0-44.605197351a3c8bdd595af2d2a9bc3025bca48ea2",
+@@ -2663,7 +2665,7 @@
+       "version": "5.22.0",
+       "resolved": "https://registry.npmjs.org/@prisma/get-platform/-/get-platform-5.22.0.tgz",
+       "integrity": "sha512-pHhpQdr1UPFpt+zFfnPazhulaZYCUqeIcPpJViYoq9R+D/yw4fjE+CtnsnKzPYm0ddUbeXUzjGVGIRVgPDCk4Q==",
+-      "dev": true,
++      "devOptional": true,
+       "dependencies": {
+         "@prisma/debug": "5.22.0"
+       }
+@@ -3126,6 +3128,11 @@
+       "resolved": "https://registry.npmjs.org/@socket.io/component-emitter/-/component-emitter-3.1.2.tgz",
+       "integrity": "sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA=="
+     },
++    "node_modules/@stablelib/base64": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/@stablelib/base64/-/base64-1.0.1.tgz",
++      "integrity": "sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ=="
++    },
+     "node_modules/@swc/helpers": {
+       "version": "0.5.18",
+       "resolved": "https://registry.npmjs.org/@swc/helpers/-/helpers-0.5.18.tgz",
+@@ -3545,7 +3552,7 @@
+       "version": "15.7.15",
+       "resolved": "https://registry.npmjs.org/@types/prop-types/-/prop-types-15.7.15.tgz",
+       "integrity": "sha512-F6bEyamV9jKGAFBEmlQnesRPGOQqS2+Uwi0Em15xenOxHaf2hv6L8YCVn3rPdPJOiJfPiCnLIRyvwVaqMY3MIw==",
+-      "dev": true
++      "devOptional": true
+     },
+     "node_modules/@types/qs": {
+       "version": "6.14.0",
+@@ -3563,7 +3570,7 @@
+       "version": "18.3.28",
+       "resolved": "https://registry.npmjs.org/@types/react/-/react-18.3.28.tgz",
+       "integrity": "sha512-z9VXpC7MWrhfWipitjNdgCauoMLRdIILQsAEV+ZesIzBq/oUlxk0m3ApZuMFCXdnS4U7KrI+l3WRUEGQ8K1QKw==",
+-      "dev": true,
++      "devOptional": true,
+       "dependencies": {
+         "@types/prop-types": "*",
+         "csstype": "^3.2.2"
+@@ -5543,6 +5550,11 @@
+         "url": "https://github.com/sponsors/kossnocorp"
+       }
+     },
++    "node_modules/dayjs": {
++      "version": "1.11.19",
++      "resolved": "https://registry.npmjs.org/dayjs/-/dayjs-1.11.19.tgz",
++      "integrity": "sha512-t5EcLVS6QPBNqM2z8fakk/NKel+Xzshgt8FFKAn+qwlD1pzZWxh0nVCrvFK7ZDb6XucZeF9z8C7CBWTRIVApAw=="
++    },
+     "node_modules/debug": {
+       "version": "4.4.3",
+       "resolved": "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz",
+@@ -6511,6 +6523,11 @@
+       "resolved": "https://registry.npmjs.org/fast-safe-stringify/-/fast-safe-stringify-2.1.1.tgz",
+       "integrity": "sha512-W+KJc2dmILlPplD/H4K9l9LcAHAfPtP6BY84uVLXQ6Evcz9Lcg33Y2z1IVblT6xdY54PXYVHEv+0Wpq8Io6zkA=="
+     },
++    "node_modules/fast-sha256": {
++      "version": "1.3.0",
++      "resolved": "https://registry.npmjs.org/fast-sha256/-/fast-sha256-1.3.0.tgz",
++      "integrity": "sha512-n11RGP/lrWEFI/bWdygLxhI+pVeo1ZYIVwvvPkW7azl/rOy+F3HYRZ2K5zeE9mmkhQppyv9sQFx0JM9UabnpPQ=="
++    },
+     "node_modules/fastq": {
+       "version": "1.20.1",
+       "resolved": "https://registry.npmjs.org/fastq/-/fastq-1.20.1.tgz",
+@@ -9540,6 +9557,11 @@
+         "node": ">=4"
+       }
+     },
++    "node_modules/postal-mime": {
++      "version": "2.7.3",
++      "resolved": "https://registry.npmjs.org/postal-mime/-/postal-mime-2.7.3.tgz",
++      "integrity": "sha512-MjhXadAJaWgYzevi46+3kLak8y6gbg0ku14O1gO/LNOuay8dO+1PtcSGvAdgDR0DoIsSaiIA8y/Ddw6MnrO0Tw=="
++    },
+     "node_modules/postcss": {
+       "version": "8.5.6",
+       "resolved": "https://registry.npmjs.org/postcss/-/postcss-8.5.6.tgz",
+@@ -9771,7 +9793,7 @@
+       "version": "5.22.0",
+       "resolved": "https://registry.npmjs.org/prisma/-/prisma-5.22.0.tgz",
+       "integrity": "sha512-vtpjW3XuYCSnMsNVBjLMNkTj6OZbudcPPTPYHqX0CJfpcdWciI1dM8uHETwmDxxiqEwCIE6WvXucWUetJgfu/A==",
+-      "dev": true,
++      "devOptional": true,
+       "hasInstallScript": true,
+       "dependencies": {
+         "@prisma/engines": "5.22.0"
+@@ -10208,6 +10230,26 @@
+         "node": ">=0.10.0"
+       }
+     },
++    "node_modules/resend": {
++      "version": "6.9.2",
++      "resolved": "https://registry.npmjs.org/resend/-/resend-6.9.2.tgz",
++      "integrity": "sha512-uIM6CQ08tS+hTCRuKBFbOBvHIGaEhqZe8s4FOgqsVXSbQLAhmNWpmUhG3UAtRnmcwTWFUqnHa/+Vux8YGPyDBA==",
++      "dependencies": {
++        "postal-mime": "2.7.3",
++        "svix": "1.84.1"
++      },
++      "engines": {
++        "node": ">=20"
++      },
++      "peerDependencies": {
++        "@react-email/render": "*"
++      },
++      "peerDependenciesMeta": {
++        "@react-email/render": {
++          "optional": true
++        }
++      }
++    },
+     "node_modules/resolve": {
+       "version": "1.22.11",
+       "resolved": "https://registry.npmjs.org/resolve/-/resolve-1.22.11.tgz",
+@@ -10540,6 +10582,12 @@
+       "integrity": "sha512-xbbCH5dCYU5T8LcEhhuh7HJ88HXuW3qsI3Y0zOZFKfZEHcpWiHU/Jxzk629Brsab/mMiHQti9wMP+845RPe3Vg==",
+       "dev": true
+     },
++    "node_modules/scmp": {
++      "version": "2.1.0",
++      "resolved": "https://registry.npmjs.org/scmp/-/scmp-2.1.0.tgz",
++      "integrity": "sha512-o/mRQGk9Rcer/jEEw/yw4mwo3EU/NvYvp577/Btqrym9Qy5/MdWGBqipbALgd2lrdWTJ5/gqDusxfnQBxOxT2Q==",
++      "deprecated": "Just use Node.js's crypto.timingSafeEqual()"
++    },
+     "node_modules/semver": {
+       "version": "7.7.4",
+       "resolved": "https://registry.npmjs.org/semver/-/semver-7.7.4.tgz",
+@@ -10903,6 +10951,15 @@
+         "node": ">=8"
+       }
+     },
++    "node_modules/standardwebhooks": {
++      "version": "1.0.0",
++      "resolved": "https://registry.npmjs.org/standardwebhooks/-/standardwebhooks-1.0.0.tgz",
++      "integrity": "sha512-BbHGOQK9olHPMvQNHWul6MYlrRTAOKn03rOe4A8O3CLWhNf4YHBqq2HJKKC+sfqpxiBY52pNeesD6jIiLDz8jg==",
++      "dependencies": {
++        "@stablelib/base64": "^1.0.0",
++        "fast-sha256": "^1.3.0"
++      }
++    },
+     "node_modules/statuses": {
+       "version": "2.0.2",
+       "resolved": "https://registry.npmjs.org/statuses/-/statuses-2.0.2.tgz",
+@@ -11134,6 +11191,27 @@
+         "url": "https://github.com/sponsors/ljharb"
+       }
+     },
++    "node_modules/svix": {
++      "version": "1.84.1",
++      "resolved": "https://registry.npmjs.org/svix/-/svix-1.84.1.tgz",
++      "integrity": "sha512-K8DPPSZaW/XqXiz1kEyzSHYgmGLnhB43nQCMeKjWGCUpLIpAMMM8kx3rVVOSm6Bo6EHyK1RQLPT4R06skM/MlQ==",
++      "dependencies": {
++        "standardwebhooks": "1.0.0",
++        "uuid": "^10.0.0"
++      }
++    },
++    "node_modules/svix/node_modules/uuid": {
++      "version": "10.0.0",
++      "resolved": "https://registry.npmjs.org/uuid/-/uuid-10.0.0.tgz",
++      "integrity": "sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==",
++      "funding": [
++        "https://github.com/sponsors/broofa",
++        "https://github.com/sponsors/ctavan"
++      ],
++      "bin": {
++        "uuid": "dist/bin/uuid"
++      }
++    },
+     "node_modules/swagger-ui-dist": {
+       "version": "5.17.14",
+       "resolved": "https://registry.npmjs.org/swagger-ui-dist/-/swagger-ui-dist-5.17.14.tgz",
+@@ -11752,6 +11830,23 @@
+       "resolved": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
+       "integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="
+     },
++    "node_modules/twilio": {
++      "version": "5.12.2",
++      "resolved": "https://registry.npmjs.org/twilio/-/twilio-5.12.2.tgz",
++      "integrity": "sha512-yjTH04Ig0Z3PAxIXhwrto0IJC4Gv7lBDQQ9f4/P9zJhnxVdd+3tENqBMJOtdmmRags3X0jl2IGKEQefCEpJE9g==",
++      "dependencies": {
++        "axios": "^1.12.0",
++        "dayjs": "^1.11.9",
++        "https-proxy-agent": "^5.0.0",
++        "jsonwebtoken": "^9.0.2",
++        "qs": "^6.14.1",
++        "scmp": "^2.1.0",
++        "xmlbuilder": "^13.0.2"
++      },
++      "engines": {
++        "node": ">=14.0"
++      }
++    },
+     "node_modules/type-check": {
+       "version": "0.4.0",
+       "resolved": "https://registry.npmjs.org/type-check/-/type-check-0.4.0.tgz",
+@@ -11806,7 +11901,7 @@
+       "version": "5.9.3",
+       "resolved": "https://registry.npmjs.org/typescript/-/typescript-5.9.3.tgz",
+       "integrity": "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==",
+-      "dev": true,
++      "devOptional": true,
+       "bin": {
+         "tsc": "bin/tsc",
+         "tsserver": "bin/tsserver"
+@@ -12313,6 +12408,14 @@
+         }
+       }
+     },
++    "node_modules/xmlbuilder": {
++      "version": "13.0.2",
++      "resolved": "https://registry.npmjs.org/xmlbuilder/-/xmlbuilder-13.0.2.tgz",
++      "integrity": "sha512-Eux0i2QdDYKbdbA6AM6xE4m6ZTZr4G4xF9kahI2ukSEMCzwce2eX9WlTI5J3s+NU7hpasFsr8hWIONae7LluAQ==",
++      "engines": {
++        "node": ">=6.0"
++      }
++    },
+     "node_modules/xmlhttprequest-ssl": {
+       "version": "2.1.2",
+       "resolved": "https://registry.npmjs.org/xmlhttprequest-ssl/-/xmlhttprequest-ssl-2.1.2.tgz",

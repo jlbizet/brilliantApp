@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import FullCalendar from '@fullcalendar/react';
@@ -11,6 +11,16 @@ import { appointmentsApi, usersApi, patientsApi, waitlistApi } from '../../api';
 import type { Appointment } from '../../types';
 import AppointmentDetailsModal from './components/AppointmentDetailsModal';
 import { DatePicker, TimePicker } from '../../components/ui';
+import { toISOString, toDateString } from '../../utils/timezone';
+
+function toLocalDateString(dateStr: string): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
 const STATUS_COLORS: Record<string, string> = {
     SCHEDULED: '#338dfc', CONFIRMED: '#22c55e', IN_PROGRESS: '#f59e0b',
@@ -23,15 +33,6 @@ export default function AppointmentsPage() {
     const calendarRef = useRef<any>(null);
     const [showForm, setShowForm] = useState(false);
 
-    // Helper to format date for inputs without UTC shift
-    const formatLocalDate = (date: Date) => {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
-    };
     const [showWaitlistForm, setShowWaitlistForm] = useState(false);
     const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
@@ -56,7 +57,6 @@ export default function AppointmentsPage() {
         queryKey: ['dentists'],
         queryFn: usersApi.getDentists,
     });
-
     const { data: patients } = useQuery({
         queryKey: ['patients-list'],
         queryFn: () => patientsApi.getAll({ limit: 100 }),
@@ -77,6 +77,28 @@ export default function AppointmentsPage() {
         onError: (err: any) => toast.error(err.response?.data?.message?.[0] || t('appointments.create_error') || 'Failed to create appointment'),
     });
 
+    const events = (appointments || []).map((apt: Appointment) => ({
+        id: apt.id,
+        title: `${apt.patient?.firstName} ${apt.patient?.lastName} - ${apt.title}`,
+        start: apt.startTime,
+        end: apt.endTime,
+        backgroundColor: STATUS_COLORS[apt.status] || '#338dfc',
+        borderColor: 'transparent',
+        extendedProps: { ...apt },
+    }));
+
+    useEffect(() => {
+        console.log('[DEBUG] Appointments data from API:', appointments);
+        if (appointments && appointments.length > 0) {
+            console.log('[DEBUG] First appointment details:', {
+                id: appointments[0].id,
+                start: appointments[0].startTime,
+                type: typeof appointments[0].startTime
+            });
+        }
+        console.log('[DEBUG] Events mapped for FullCalendar:', events);
+    }, [appointments, events]);
+
     const waitlistMutation = useMutation({
         mutationFn: waitlistApi.create,
         onSuccess: () => {
@@ -87,16 +109,6 @@ export default function AppointmentsPage() {
         },
         onError: (err: any) => toast.error(t('appointments.waitlist_error') || 'Failed to add to waitlist'),
     });
-
-    const events = (appointments || []).map((apt: Appointment) => ({
-        id: apt.id,
-        title: `${apt.patient?.firstName} ${apt.patient?.lastName} - ${apt.title}`,
-        start: apt.startTime,
-        end: apt.endTime,
-        backgroundColor: STATUS_COLORS[apt.status] || '#338dfc',
-        borderColor: 'transparent',
-        extendedProps: { ...apt },
-    }));
 
     return (
         <div className="space-y-6">
@@ -128,12 +140,18 @@ export default function AppointmentsPage() {
                     <form onSubmit={(e) => {
                         e.preventDefault();
                         const submitData = { ...formData };
+
+                        submitData.startTime = toISOString(new Date(formData.startTime));
+                        submitData.endTime = toISOString(new Date(formData.endTime));
+
                         if (!submitData.isRecurring) {
                             delete (submitData as any).recurringPattern;
                             delete (submitData as any).recurringEndDate;
                         } else if (submitData.recurringEndDate) {
                             if (submitData.recurringEndDate.length === 10) {
-                                submitData.recurringEndDate = `${submitData.recurringEndDate}T23:59:59Z`;
+                                submitData.recurringEndDate = `${submitData.recurringEndDate}T23:59:59`;
+                            } else {
+                                submitData.recurringEndDate = toISOString(new Date(submitData.recurringEndDate));
                             }
                         }
                         createMutation.mutate(submitData);
@@ -160,17 +178,19 @@ export default function AppointmentsPage() {
                             <div>
                                 <label className="label">{t('common.date')} *</label>
                                 <DatePicker
-                                    value={formData.startTime ? formData.startTime.split('T')[0] : ''}
+                                    value={toLocalDateString(formData.startTime)}
                                     onChange={date => {
                                         if (!date) return;
-                                        const time = formData.startTime ? formData.startTime.split('T')[1]?.slice(0, 5) : '09:00';
-                                        const startStr = `${date}T${time}`;
-                                        const start = new Date(startStr);
-                                        const end = new Date(start.getTime() + 30 * 60000);
+                                        const currentTime = formData.startTime ? new Date(formData.startTime) : new Date();
+                                        const [year, month, day] = date.split('-').map(Number);
+                                        const newDate = new Date(currentTime);
+                                        newDate.setFullYear(year, month - 1, day);
+
+                                        const end = new Date(newDate.getTime() + 30 * 60000);
                                         setFormData({
                                             ...formData,
-                                            startTime: startStr,
-                                            endTime: formatLocalDate(end)
+                                            startTime: toISOString(newDate),
+                                            endTime: toISOString(end)
                                         });
                                     }}
                                 />
@@ -178,22 +198,22 @@ export default function AppointmentsPage() {
                             <div>
                                 <label className="label">{t('common.time')} *</label>
                                 <TimePicker
-                                    value={formData.startTime ? formData.startTime.split('T')[1]?.slice(0, 5) : ''}
+                                    value={formData.startTime ? new Date(formData.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''}
                                     onChange={time => {
                                         if (!time) return;
-                                        const date = formData.startTime ? formData.startTime.split('T')[0] : new Date().toISOString().split('T')[0];
-                                        const startStr = `${date}T${time}`;
-                                        const start = new Date(startStr);
+                                        const [hours, minutes] = time.split(':').map(Number);
+                                        const newStart = formData.startTime ? new Date(formData.startTime) : new Date();
+                                        newStart.setHours(hours, minutes, 0, 0);
 
-                                        const currentStart = new Date(formData.startTime || startStr);
+                                        const currentStart = new Date(formData.startTime || newStart);
                                         const currentEnd = new Date(formData.endTime || new Date(currentStart.getTime() + 30 * 60000));
                                         const durationMs = currentEnd.getTime() - currentStart.getTime();
-                                        const end = new Date(start.getTime() + (isNaN(durationMs) ? 30 * 60000 : durationMs));
+                                        const end = new Date(newStart.getTime() + (isNaN(durationMs) ? 30 * 60000 : durationMs));
 
                                         setFormData({
                                             ...formData,
-                                            startTime: startStr,
-                                            endTime: formatLocalDate(end)
+                                            startTime: toISOString(newStart),
+                                            endTime: toISOString(end)
                                         });
                                     }}
                                     minuteStep={15}
@@ -212,7 +232,7 @@ export default function AppointmentsPage() {
                                             if (!formData.startTime) return;
                                             const start = new Date(formData.startTime);
                                             const end = new Date(start.getTime() + mins * 60000);
-                                            setFormData({ ...formData, endTime: formatLocalDate(end) });
+                                            setFormData({ ...formData, endTime: toISOString(end) });
                                         }}
                                         className="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 hover:bg-primary-100 hover:text-primary-700 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-primary-900/30 transition-colors"
                                     >
@@ -270,7 +290,8 @@ export default function AppointmentsPage() {
                         </div>
                     )}
                 </div>
-            )}
+            )
+            }
 
             {/* Calendar & Waitlist Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -301,28 +322,18 @@ export default function AppointmentsPage() {
                             setDateRange({ start: arg.startStr, end: arg.endStr });
                         }}
                         select={(info: any) => {
-                            // Handle date selection without timezone shift
-                            const start = info.start;
-                            const end = info.end;
-                            
-                            // Format dates preserving local time
-                            const formatLocalISO = (date: Date) => {
-                                const pad = (n: number) => String(n).padStart(2, '0');
-                                return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:00`;
-                            };
-                            
                             setFormData({
                                 ...formData,
-                                startTime: formatLocalISO(start),
-                                endTime: formatLocalISO(end),
+                                startTime: toISOString(info.start),
+                                endTime: toISOString(info.end),
                             });
                             setShowForm(true);
                             calendarRef.current?.getApi().unselect();
                         }}
                         eventDrop={(info: any) => {
                             const apt = info.event.extendedProps as Appointment;
-                            const newStart = info.event.start?.toISOString();
-                            const newEnd = info.event.end?.toISOString();
+                            const newStart = info.event.start ? toISOString(info.event.start) : null;
+                            const newEnd = info.event.end ? toISOString(info.event.end) : null;
                             if (newStart && newEnd) {
                                 appointmentsApi.update(apt.id, { startTime: newStart, endTime: newEnd })
                                     .then(() => {

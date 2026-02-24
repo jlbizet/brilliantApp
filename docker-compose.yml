@@ -57,6 +57,16 @@ services:
       JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-7d}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       REDIS_URL: redis://redis:6379
+      # Email Configuration (SMTP/Nodemailer)
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Brilliant Dental Clinic}
+      ENABLE_EMAIL_NOTIFICATIONS: ${ENABLE_EMAIL_NOTIFICATIONS:-true}
+      # Calendar Configuration (Google Service Account)
+      GOOGLE_CLIENT_EMAIL: ${GOOGLE_CLIENT_EMAIL}
+      GOOGLE_PRIVATE_KEY: ${GOOGLE_PRIVATE_KEY}
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,0 +1,15 @@
+﻿ M backend/.env.example
+ M backend/package.json
+ M backend/prisma/schema.prisma
+ M backend/src/modules/appointments/appointments.service.ts
+ M backend/src/modules/notifications/notifications.module.ts
+ M backend/src/modules/notifications/notifications.service.ts
+ M docker-compose.yml
+ M package-lock.json
+?? NOTIFICATIONS_SETUP.md
+?? backend/prisma/migrations/add_notification_preferences.sql
+?? backend/src/modules/notifications/email.service.ts
+?? backend/src/modules/notifications/sms.service.ts
+?? backend/test-email.js
+?? status.txt
+?? status_utf8.txt

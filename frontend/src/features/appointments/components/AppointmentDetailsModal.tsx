@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { Appointment, UserRole } from '../../../types';
 import { useAuthStore } from '../../../stores';
 import { DatePicker, TimePicker } from '../../../components/ui';
+import { toISOString } from '../../../utils/timezone';
 
 interface AppointmentDetailsModalProps {
     isOpen: boolean;
@@ -75,14 +76,32 @@ export default function AppointmentDetailsModal({ isOpen, onClose, appointment, 
                                     </div>
                                     <div className="flex gap-2">
                                         {['ADMIN', 'DENTIST', 'RECEPTIONIST'].includes(user?.role as string) && (
-                                            <button onClick={() => {
-                                                if (isEditing) {
-                                                    onUpdate(appointment.id, editData);
-                                                    setIsEditing(false);
-                                                } else {
-                                                    setIsEditing(true);
-                                                }
-                                            }} className="text-primary-500 hover:text-primary-600 font-bold text-sm px-2">
+                        <button onClick={() => {
+                            if (isEditing) {
+                                // Only send primitive fields, exclude objects like patient, dentist
+                                const allowedFields = [
+                                    'patientId', 'dentistId', 'title', 'description',
+                                    'startTime', 'endTime', 'type', 'notes',
+                                    'status', 'isRecurring', 'recurringPattern', 'recurringEndDate'
+                                ];
+                                const filteredData: any = {};
+                                allowedFields.forEach(field => {
+                                    if (editData[field] !== undefined && editData[field] !== null) {
+                                        // Only include if it's a primitive type (string, number, boolean)
+                                        const value = editData[field];
+                                        const type = typeof value;
+                                        if (type === 'string' || type === 'number' || type === 'boolean') {
+                                            filteredData[field] = value;
+                                        }
+                                    }
+                                });
+                                console.log('[Frontend] Update payload:', JSON.stringify(filteredData, null, 2));
+                                onUpdate(appointment.id, filteredData);
+                                setIsEditing(false);
+                            } else {
+                                setIsEditing(true);
+                            }
+                        }} className="text-primary-500 hover:text-primary-600 font-bold text-sm px-2">
                                                 {isEditing ? t('common.save') : t('common.edit')}
                                             </button>
                                         )}
@@ -124,8 +143,11 @@ export default function AppointmentDetailsModal({ isOpen, onClose, appointment, 
                                                 <DatePicker
                                                     value={editData.startTime.split('T')[0]}
                                                     onChange={date => {
-                                                        const time = editData.startTime.split('T')[1];
-                                                        setEditData({ ...editData, startTime: `${date}T${time}` });
+                                                        const current = new Date(editData.startTime);
+                                                        const [year, month, day] = date.split('-').map(Number);
+                                                        const newDate = new Date(current);
+                                                        newDate.setFullYear(year, month - 1, day);
+                                                        setEditData({ ...editData, startTime: toISOString(newDate) });
                                                     }}
                                                     className="py-1"
                                                 />
@@ -139,17 +161,20 @@ export default function AppointmentDetailsModal({ isOpen, onClose, appointment, 
                                             <p className="text-gray-500 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {t('common.time')}</p>
                                             {isEditing ? (
                                                 <TimePicker
-                                                    value={editData.startTime.split('T')[1].slice(0, 5)}
+                                                    value={new Date(editData.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                                                     onChange={time => {
-                                                        const date = editData.startTime.split('T')[0];
-                                                        const currentEnd = new Date(editData.endTime);
+                                                        const [hours, minutes] = time.split(':').map(Number);
+                                                        const newStart = new Date(editData.startTime);
+                                                        newStart.setHours(hours, minutes, 0, 0);
+
                                                         const currentStart = new Date(editData.startTime);
+                                                        const currentEnd = new Date(editData.endTime);
                                                         const duration = currentEnd.getTime() - currentStart.getTime();
-                                                        const newStart = new Date(`${date}T${time}`);
+
                                                         setEditData({
                                                             ...editData,
-                                                            startTime: `${date}T${time}`,
-                                                            endTime: new Date(newStart.getTime() + duration).toISOString()
+                                                            startTime: toISOString(newStart),
+                                                            endTime: toISOString(new Date(newStart.getTime() + duration))
                                                         });
                                                     }}
                                                     className="py-1"
