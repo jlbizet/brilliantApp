@@ -11,8 +11,10 @@ export class EmailService {
     private readonly logger = new Logger(EmailService.name);
     private transporter: nodemailer.Transporter | null = null;
     private isConfigured = false;
+    private readonly timezone: string;
 
     constructor(private configService: ConfigService) {
+        this.timezone = this.configService.get<string>('CLINIC_TIMEZONE') || 'UTC';
         const smtpHost = this.configService.get<string>('SMTP_HOST') || 'smtp.gmail.com';
         const smtpPort = this.configService.get<number>('SMTP_PORT') || 587;
         const smtpUser = this.configService.get<string>('SMTP_USER');
@@ -36,16 +38,16 @@ export class EmailService {
     }
 
     /**
-     * Format date for display (uses server local timezone)
+     * Format date for display (uses configured clinic timezone)
      */
     private formatDate(date: Date): string {
-        // Use toLocaleDateString with explicit options to avoid timezone conversion issues
-        return date.toLocaleDateString('en-US', {
+        return new Intl.DateTimeFormat('en-US', {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
-            day: 'numeric'
-        });
+            day: 'numeric',
+            timeZone: this.timezone
+        }).format(date);
     }
 
     /**

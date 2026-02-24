@@ -7,8 +7,11 @@ export class CalendarService {
     private readonly logger = new Logger(CalendarService.name);
     private calendar: calendar_v3.Calendar | null = null;
     private isConfigured = false;
+    private readonly calendarId: string;
 
     constructor(private configService: ConfigService) {
+        this.calendarId = this.configService.get<string>('GOOGLE_CALENDAR_ID') || 'primary';
+
         const clientEmail = this.configService.get<string>('GOOGLE_CLIENT_EMAIL');
         let privateKey = this.configService.get<string>('GOOGLE_PRIVATE_KEY');
 
@@ -25,7 +28,7 @@ export class CalendarService {
 
                 this.calendar = google.calendar({ version: 'v3', auth });
                 this.isConfigured = true;
-                this.logger.log('Google Calendar service configured');
+                this.logger.log(`Google Calendar service configured for calendar: ${this.calendarId}`);
             } catch (error) {
                 this.logger.error('Failed to configure Google Calendar:', error.message);
             }
@@ -56,7 +59,7 @@ export class CalendarService {
         try {
             const endTime = new Date(params.appointmentDate.getTime() + 60 * 60 * 1000);
 
-            this.logger.log(`[Calendar] Creating event: start=${params.appointmentDate.toISOString()}, end=${endTime.toISOString()}`);
+            this.logger.log(`[Calendar] Creating event in ${this.calendarId}: start=${params.appointmentDate.toISOString()}, end=${endTime.toISOString()}`);
 
             const event = {
                 summary: `Dental Appointment - ${params.patientName}`,
@@ -68,8 +71,6 @@ export class CalendarService {
                 end: {
                     dateTime: endTime.toISOString(),
                 },
-                // Note: attendees removed — service accounts require Domain-Wide Delegation
-                // to invite external users. The clinic calendar tracks the appointment internally.
                 reminders: {
                     useDefault: false,
                     overrides: [
@@ -80,7 +81,7 @@ export class CalendarService {
             };
 
             const result = await this.calendar.events.insert({
-                calendarId: 'primary',
+                calendarId: this.calendarId,
                 requestBody: event,
             });
 
@@ -97,11 +98,7 @@ export class CalendarService {
      */
     async cancelAppointmentEvent(params: {
         patientEmail: string;
-        // Ideally we need an event ID but we would need to store it in DB.
-        // For now, this is a placeholder or relies on the patient deleting from their calendar.
     }): Promise<boolean> {
-        // Implementation note: Storing the event.id returned by createAppointmentEvent
-        // in your DB would allow you to delete it here.
         this.logger.warn('Cancel calendar event requires storing event ID in DB');
         return false;
     }
@@ -110,8 +107,6 @@ export class CalendarService {
      * Check if Calendar service is configured
      */
     isSmsEnabled(): boolean {
-        // Just keeping this named isSmsEnabled so we don't have to rename everything immediately,
-        // or we rename it to isCalendarEnabled when refactoring the caller.
         return this.isConfigured;
     }
 }

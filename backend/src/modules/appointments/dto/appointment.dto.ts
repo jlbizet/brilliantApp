@@ -24,5 +24,6 @@ export class AppointmentQueryDto {
     @ApiPropertyOptional() @IsOptional() @IsDateString() startDate?: string;
     @ApiPropertyOptional() @IsOptional() @IsDateString() endDate?: string;
     @ApiPropertyOptional() @IsOptional() @IsString() dentistId?: string;
+    @ApiPropertyOptional({ type: [String] }) @IsOptional() @IsString({ each: true }) dentistIds?: string[];
     @ApiPropertyOptional({ enum: AppointmentStatus }) @IsOptional() @IsEnum(AppointmentStatus) status?: AppointmentStatus;
 }

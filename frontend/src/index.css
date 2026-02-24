@@ -108,53 +108,69 @@
 
 /* FullCalendar overrides */
 .fc {
-  --fc-border-color: theme('colors.gray.200');
-  --fc-button-bg-color: theme('colors.primary.600');
-  --fc-button-hover-bg-color: theme('colors.primary.500');
-  --fc-button-active-bg-color: theme('colors.primary.700');
-  --fc-event-bg-color: theme('colors.primary.500');
-  --fc-today-bg-color: theme('colors.primary.50');
+  --fc-border-color: theme('colors.gray.100');
+  --fc-today-bg-color: theme('colors.primary.50 / 0.5');
+  --fc-event-bg-color: theme('colors.primary.600');
+  --fc-now-indicator-color: #ea4335;
   font-family: 'Inter', sans-serif !important;
 }
 
 .dark .fc {
   --fc-border-color: theme('colors.gray.800');
-  --fc-today-bg-color: theme('colors.primary.900 / 0.15');
-  --fc-page-bg-color: theme('colors.gray.900');
-  --fc-list-event-hover-bg-color: theme('colors.gray.800');
-  --fc-neutral-bg-color: theme('colors.gray.800');
+  --fc-today-bg-color: theme('colors.primary.900 / 0.1');
+}
+
+.fc .fc-scrollgrid {
+  @apply border-0 !important;
 }
 
 .fc .fc-col-header-cell {
-  @apply bg-gray-50 dark:bg-gray-800/80 transition-colors;
+  @apply bg-transparent dark:bg-transparent border-0 !important;
 }
 
 .fc .fc-col-header-cell-cushion {
-  @apply dark:text-gray-200 py-3 block;
+  @apply text-xs font-medium text-gray-500 uppercase tracking-widest py-4 block !important;
 }
 
 .fc .fc-timegrid-slot {
-  @apply h-12;
+  @apply h-14 border-gray-50 dark:border-gray-800/50 !important;
 }
 
 .fc .fc-timegrid-slot-label-cushion {
-  @apply dark:text-gray-400 text-xs;
+  @apply text-[11px] text-gray-400 font-normal !important;
 }
 
 .fc .fc-button {
-  @apply rounded-lg text-sm font-medium border-0 shadow-sm;
+  @apply bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 border-0 rounded-full px-4 transition-colors !important;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  @apply bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400 !important;
 }
 
 .fc .fc-toolbar-title {
-  @apply text-lg font-bold text-gray-800 dark:text-gray-100;
+  @apply text-xl font-medium text-gray-700 dark:text-gray-200 !important;
 }
 
 .fc .fc-event {
-  @apply rounded-lg border-0 px-2 py-1 text-xs font-medium cursor-pointer shadow-sm;
+  @apply rounded-md border-0 px-2 py-1 text-[11px] font-semibold cursor-pointer shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98] !important;
 }
 
-.fc .fc-day-today {
-  @apply ring-1 ring-inset ring-primary-500/20 !important;
+.fc .fc-v-event {
+  @apply bg-primary-600 !important;
+}
+
+.fc .fc-timegrid-now-indicator-arrow {
+  @apply border-l-[6px] border-l-[#ea4335] -mt-[5px] !important;
+}
+
+.fc .fc-timegrid-now-indicator-line {
+  @apply border-t-2 border-[#ea4335] !important;
+}
+
+.fc-direction-ltr .fc-timegrid-slot-label-frame {
+  @apply text-right pr-4 !important;
 }
 
 /* Custom scrollbar */

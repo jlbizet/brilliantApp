@@ -23,6 +23,7 @@ export class NotificationsService {
     private readonly logger = new Logger(NotificationsService.name);
     private calendarEnabled = false;
     private emailEnabled = false;
+    private readonly timezone: string;
 
     constructor(
         private prisma: PrismaService,
@@ -33,28 +34,24 @@ export class NotificationsService {
     ) {
         const rawEmailEnv = this.configService.get('ENABLE_EMAIL_NOTIFICATIONS');
         this.emailEnabled = rawEmailEnv === 'true' || rawEmailEnv === true;
+        this.timezone = this.configService.get<string>('CLINIC_TIMEZONE') || 'UTC';
         // Don't cache calendarEnabled here, check it dynamically to avoid initialization race conditions
 
-        this.logger.log(`Notifications initialized | Email Enabled: ${this.emailEnabled} | Calendar Enabled: checked dynamically`);
+        this.logger.log(`Notifications initialized | Email Enabled: ${this.emailEnabled} | Timezone: ${this.timezone} | Calendar Enabled: checked dynamically`);
     }
 
     /**
-     * Format time for display - Bypasses timezone conversion to preserve original time
+     * Format time for display - Uses configured clinic timezone
      */
     private formatTime(date: Date): string {
-        // Extract time components directly from the Date object
-        // This bypasses any timezone conversion that might happen with toLocaleTimeString
-        const hours = date.getHours();
-        const minutes = date.getMinutes();
-        
-        // Convert to 12-hour format
-        const period = hours >= 12 ? 'PM' : 'AM';
-        const displayHours = hours % 12 || 12;
-        
-        // Format with leading zeros
-        const displayMinutes = minutes.toString().padStart(2, '0');
-        
-        return `${displayHours}:${displayMinutes} ${period}`;
+        const formatted = new Intl.DateTimeFormat('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: this.timezone
+        }).format(date);
+        this.logger.log(`[Trace] formatTime: input=${date.toISOString()} | timezone=${this.timezone} | formatted=${formatted}`);
+        return formatted;
     }
 
     private isCalendarEnabled(): boolean {
@@ -158,9 +155,10 @@ export class NotificationsService {
 
             // Send email directly
             const calendarEnabled = this.isCalendarEnabled();
-            this.logger.log(`[Trace] createAppointmentNotification: patientEmail=${appointmentData.patientEmail}, emailEnabled=${this.emailEnabled}, calendarEnabled=${calendarEnabled}`);
+            this.logger.log(`[Trace] createAppointmentNotification: patientEmail=${appointmentData.patientEmail}, emailEnabled=${this.emailEnabled}, calendarEnabled=${calendarEnabled}, timezone=${this.timezone}`);
 
             if (appointmentData.patientEmail && this.emailEnabled) {
+                this.logger.log(`[Trace] Formatting time for email. Input UTC: ${appointmentData.startTime.toISOString()}`);
                 const timeStr = this.formatTime(appointmentData.startTime);
                 this.logger.log(`[Trace] Email time formatted: ${timeStr}`);
 

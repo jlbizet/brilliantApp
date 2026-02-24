@@ -4,46 +4,45 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { CreateAppointmentDto, UpdateAppointmentDto, AppointmentQueryDto } from './dto';
 import { PaginationDto, PaginatedResponseDto } from '../../common/dto';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AppointmentsService {
     private readonly logger = new Logger(AppointmentsService.name);
-    
+
+    private readonly timezone: string;
+
     constructor(
         private prisma: PrismaService,
         private notificationsService: NotificationsService,
-    ) { }
+        private configService: ConfigService,
+    ) {
+        this.timezone = this.configService.get<string>('CLINIC_TIMEZONE') || 'UTC';
+    }
 
     /**
      * Format date for display
      */
     private formatDate(date: Date): string {
-        // Use toLocaleDateString with explicit options to avoid timezone conversion issues
-        return date.toLocaleDateString('en-US', {
+        return new Intl.DateTimeFormat('en-US', {
             weekday: 'short',
             month: 'short',
             day: 'numeric',
-            year: 'numeric'
-        });
+            year: 'numeric',
+            timeZone: this.timezone
+        }).format(date);
     }
 
     /**
-     * Format time for display - Bypasses timezone conversion to preserve original time
+     * Format time for display
      */
     private formatTime(date: Date): string {
-        // Extract time components directly from the Date object
-        // This bypasses any timezone conversion that might happen with toLocaleTimeString
-        const hours = date.getHours();
-        const minutes = date.getMinutes();
-        
-        // Convert to 12-hour format
-        const period = hours >= 12 ? 'PM' : 'AM';
-        const displayHours = hours % 12 || 12;
-        
-        // Format with leading zeros
-        const displayMinutes = minutes.toString().padStart(2, '0');
-        
-        return `${displayHours}:${displayMinutes} ${period}`;
+        return new Intl.DateTimeFormat('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: this.timezone
+        }).format(date);
     }
 
     async findAll(query: PaginationDto & AppointmentQueryDto) {
@@ -63,7 +62,7 @@ export class AppointmentsService {
 
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
-        
+
         const [data, total] = await Promise.all([
             this.prisma.appointment.findMany({
                 where,
@@ -99,7 +98,7 @@ export class AppointmentsService {
     async create(dto: CreateAppointmentDto) {
         console.log(`[CREATE] Received dto.startTime: ${dto.startTime}`);
         console.log(`[CREATE] Parsed Date: ${new Date(dto.startTime).toISOString()}`);
-        
+
         // Verify patient exists
         const patient = await this.prisma.patient.findUnique({
             where: { id: dto.patientId },
@@ -282,7 +281,7 @@ export class AppointmentsService {
             'startTime', 'endTime', 'type', 'notes',
             'status', 'isRecurring', 'recurringPattern', 'recurringEndDate'
         ];
-        
+
         const dtoAny = dto as any;
         const data: any = {};
         for (const key of allowedFields) {
@@ -290,9 +289,9 @@ export class AppointmentsService {
                 data[key] = dtoAny[key];
             }
         }
-        
+
         console.log(`[UPDATE] Filtered data keys:`, Object.keys(data));
-        
+
         try {
             if (data.startTime) data.startTime = new Date(data.startTime);
             if (data.endTime) data.endTime = new Date(data.endTime);
@@ -319,11 +318,11 @@ export class AppointmentsService {
 
     async remove(id: string) {
         const appointment = await this.findOne(id);
-        
+
         // Notify about cancellation
         const timeStr = this.formatTime(appointment.startTime);
         const dateStr = this.formatDate(appointment.startTime);
-        
+
         await this.notificationsService.createAppointmentNotification(
             appointment.dentistId,
             appointment.patientId,
@@ -362,8 +361,11 @@ export class AppointmentsService {
             ];
         }
         if (query.dentistId) {
-            console.log(`[CalendarFetch] Filtering by dentistId: ${query.dentistId}`);
+            console.log(`[CalendarFetch] Filtering by single dentistId: ${query.dentistId}`);
             where.dentistId = query.dentistId;
+        } else if (query.dentistIds) {
+            console.log(`[CalendarFetch] Filtering by multiple dentistIds: ${query.dentistIds}`);
+            where.dentistId = { in: query.dentistIds };
         }
         if (query.status) where.status = query.status;
 
@@ -421,6 +423,13 @@ export class AppointmentsService {
                 `You have an appointment with ${apt.patient.firstName} ${apt.patient.lastName} tomorrow at ${timeStr}`,
                 'Appointment Reminder',
                 `Reminder: You have an appointment with Dr. ${apt.dentist.firstName} ${apt.dentist.lastName} tomorrow at ${timeStr}`,
+                {
+                    startTime: apt.startTime,
+                    dentistName: `${apt.dentist?.firstName} ${apt.dentist?.lastName}`,
+                    patientName: `${apt.patient?.firstName} ${apt.patient?.lastName}`,
+                    patientEmail: apt.patient?.email ?? undefined,
+                    patientPhone: apt.patient?.phone ?? undefined,
+                }
             );
 
             console.log(`[Reminders] Created notifications for appointment with ${apt.patient.firstName} ${apt.patient.lastName}`);
