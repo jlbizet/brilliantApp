@@ -393,7 +393,7 @@ export class AppointmentsService {
         });
     }
 
-    @Cron(CronExpression.EVERY_DAY_AT_9AM)
+    @Cron(CronExpression.EVERY_DAY_AT_9AM, { timeZone: 'America/Montevideo' })
     async handleReminders() {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
@@ -410,30 +410,58 @@ export class AppointmentsService {
             include: { patient: true, dentist: true },
         });
 
-        console.log(`[Reminders] Found ${upcoming.length} appointments for tomorrow. Creating notifications...`);
+        this.logger.log(`[Reminders] Found ${upcoming.length} appointments for tomorrow in clinic timezone. Creating notifications...`);
 
         for (const apt of upcoming) {
-            const timeStr = this.formatTime(apt.startTime);
-
-            // Notify BOTH dentist AND patient
-            await this.notificationsService.createAppointmentNotification(
-                apt.dentistId,
-                apt.patientId,
-                'Upcoming Appointment Tomorrow',
-                `You have an appointment with ${apt.patient.firstName} ${apt.patient.lastName} tomorrow at ${timeStr}`,
-                'Appointment Reminder',
-                `Reminder: You have an appointment with Dr. ${apt.dentist.firstName} ${apt.dentist.lastName} tomorrow at ${timeStr}`,
-                {
-                    startTime: apt.startTime,
-                    dentistName: `${apt.dentist?.firstName} ${apt.dentist?.lastName}`,
-                    patientName: `${apt.patient?.firstName} ${apt.patient?.lastName}`,
-                    patientEmail: apt.patient?.email ?? undefined,
-                    patientPhone: apt.patient?.phone ?? undefined,
-                }
-            );
-
-            console.log(`[Reminders] Created notifications for appointment with ${apt.patient.firstName} ${apt.patient.lastName}`);
+            await this.sendReminder(apt, 'Upcoming Appointment Tomorrow');
         }
+    }
+
+    @Cron(CronExpression.EVERY_HOUR, { timeZone: 'America/Montevideo' })
+    async handleSameDayReminders() {
+        const now = new Date();
+        const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+        const twoHoursAndFiveMinutesLater = new Date(now.getTime() + (2 * 60 + 5) * 60 * 1000);
+
+        const upcoming = await this.prisma.appointment.findMany({
+            where: {
+                startTime: {
+                    gte: twoHoursLater,
+                    lt: twoHoursAndFiveMinutesLater
+                },
+                status: 'SCHEDULED',
+            },
+            include: { patient: true, dentist: true },
+        });
+
+        if (upcoming.length > 0) {
+            this.logger.log(`[SameDayReminders] Found ${upcoming.length} appointments starting in ~2 hours. Sending urgent reminders...`);
+            for (const apt of upcoming) {
+                await this.sendReminder(apt, 'Appointment Reminder (2 hours)');
+            }
+        }
+    }
+
+    private async sendReminder(apt: any, reminderTitle: string) {
+        const timeStr = this.formatTime(apt.startTime);
+
+        await this.notificationsService.createAppointmentNotification(
+            apt.dentistId,
+            apt.patientId,
+            reminderTitle,
+            `You have an appointment with ${apt.patient.firstName} ${apt.patient.lastName} at ${timeStr}`,
+            'Appointment Reminder',
+            `Reminder: You have an appointment with Dr. ${apt.dentist.firstName} ${apt.dentist.lastName} at ${timeStr}`,
+            {
+                startTime: apt.startTime,
+                dentistName: `${apt.dentist?.firstName} ${apt.dentist?.lastName}`,
+                patientName: `${apt.patient?.firstName} ${apt.patient?.lastName}`,
+                patientEmail: apt.patient?.email ?? undefined,
+                patientPhone: apt.patient?.phone ?? undefined,
+            }
+        );
+
+        this.logger.log(`[Reminders] Successfully sent ${reminderTitle} to patient ${apt.patient.firstName} ${apt.patient.lastName}`);
     }
 
     private async notifyAppointmentCreated(appointment: any) {

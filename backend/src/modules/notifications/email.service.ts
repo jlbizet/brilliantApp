@@ -225,6 +225,12 @@ export class EmailService {
         clinicPhone?: string;
     }): string {
         const dateStr = this.formatDate(params.appointmentDate);
+        const clinicName = params.clinicName || 'Brilliant Dental';
+        const clinicPhone = params.clinicPhone || '+598 9000 0000'; // Default Uruguay placeholder
+        const clinicAddress = params.clinicAddress || 'Av. 18 de Julio, Montevideo, Uruguay';
+
+        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clinicAddress)}`;
+        const whatsappUrl = `https://wa.me/${clinicPhone.replace(/\s+/g, '')}?text=${encodeURIComponent(`Hi, I want to confirm my appointment for ${dateStr} at ${params.appointmentTime}`)}`;
 
         return `
             <!DOCTYPE html>
@@ -234,29 +240,55 @@ export class EmailService {
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Appointment Reminder</title>
             </head>
-            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-                    <h1 style="color: white; margin: 0; font-size: 24px;">${params.clinicName || 'Brilliant Dental'}</h1>
+            <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; border-radius: 12px 12px 0 0; shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    <h1 style="color: white; margin: 0; font-size: 28px; letter-spacing: 1px;">${clinicName}</h1>
+                    <p style="color: rgba(255,255,255,0.8); margin-top: 10px;">We look forward to seeing you!</p>
                 </div>
-                <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
-                    <h2 style="color: #667eea; margin-top: 0;">Appointment Reminder</h2>
-                    <p>Hello ${params.patientName},</p>
+                <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 12px 12px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+                    <h2 style="color: #667eea; margin-top: 0; font-size: 22px;">Appointment Reminder</h2>
+                    <p>Hello <strong>${params.patientName}</strong>,</p>
                     <p>This is a friendly reminder of your upcoming appointment:</p>
                     
-                    <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                        <p style="margin: 5px 0;"><strong>Date:</strong> ${dateStr}</p>
-                        <p style="margin: 5px 0;"><strong>Time:</strong> ${params.appointmentTime}</p>
-                        <p style="margin: 5px 0;"><strong>Dentist:</strong> Dr. ${params.dentistName}</p>
+                    <div style="background: #f8faff; padding: 25px; border-radius: 12px; margin: 25px 0; border: 1px solid #eef2ff;">
+                        <table style="width: 100%;">
+                            <tr>
+                                <td style="padding-bottom: 10px; color: #6b7280; font-size: 14px; width: 80px;">DATE</td>
+                                <td style="padding-bottom: 10px; color: #1f2937; font-weight: 600;">${dateStr}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding-bottom: 10px; color: #6b7280; font-size: 14px;">TIME</td>
+                                <td style="padding-bottom: 10px; color: #1f2937; font-weight: 600;">${params.appointmentTime}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding-bottom: 0; color: #6b7280; font-size: 14px;">DENTIST</td>
+                                <td style="padding-bottom: 0; color: #1f2937; font-weight: 600;">Dr. ${params.dentistName}</td>
+                            </tr>
+                        </table>
                     </div>
                     
-                    ${params.clinicAddress ? `<p><strong>Location:</strong><br>${params.clinicAddress}</p>` : ''}
-                    ${params.clinicPhone ? `<p><strong>Contact:</strong> ${params.clinicPhone}</p>` : ''}
+                    <div style="margin: 30px 0; text-align: center;">
+                        <a href="${whatsappUrl}" style="display: inline-block; background-color: #25d366; color: white; padding: 14px 25px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-bottom: 10px; width: 80%;">
+                            Confirm via WhatsApp
+                        </a>
+                        <br>
+                        <a href="${mapsUrl}" style="display: inline-block; background-color: #ffffff; color: #4285f4; padding: 12px 25px; text-decoration: none; border-radius: 8px; font-weight: 600; border: 1px solid #4285f4; width: 80%;">
+                            View Location in Maps
+                        </a>
+                    </div>
                     
-                    <p style="margin-top: 30px;">Please arrive 10 minutes before your scheduled time. If you need to reschedule, please contact us as soon as possible.</p>
+                    <p style="font-size: 14px; color: #4b5563;">
+                        <strong>Location:</strong> ${clinicAddress}<br>
+                        <strong>Contact:</strong> ${clinicPhone}
+                    </p>
                     
-                    <p style="margin-top: 30px; font-size: 12px; color: #666;">
-                        Thank you for choosing ${params.clinicName || 'Brilliant Dental'}!<br>
-                        This is an automated reminder. Please do not reply to this email.
+                    <p style="margin-top: 30px; font-size: 13px; color: #6b7280; border-top: 1px solid #f3f4f6; pt: 20px;">
+                        Please arrive 10 minutes before your scheduled time. If you need to reschedule, please contact us at least 24 hours in advance.
+                    </p>
+                    
+                    <p style="margin-top: 25px; font-size: 12px; color: #9ca3af; text-align: center;">
+                        © ${new Date().getFullYear()} ${clinicName}. All rights reserved.<br>
+                        This is an automated message. Please do not reply directly to this email.
                     </p>
                 </div>
             </body>

@@ -8,6 +8,8 @@ services:
       POSTGRES_USER: ${DB_USER:-dental_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-dental_pass}
       POSTGRES_DB: ${DB_NAME:-dental_crm}
+    ports:
+      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -69,6 +71,7 @@ services:
       GOOGLE_PRIVATE_KEY: ${GOOGLE_PRIVATE_KEY}
       GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-primary}
       CLINIC_TIMEZONE: ${CLINIC_TIMEZONE:-America/Montevideo}
+      TZ: ${CLINIC_TIMEZONE:-America/Montevideo}
     depends_on:
       postgres:
         condition: service_healthy
