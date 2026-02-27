@@ -14,16 +14,45 @@ export interface CreateNotificationParams {
     type?: NotificationType;
     sendRealtime?: boolean;
     sendEmail?: boolean;
-    sendSms?: boolean; // Kept for interface compatibility, but we use calendar instead
+    sendSms?: boolean;
     metadata?: any;
+}
+
+export interface AppointmentNotificationParams {
+    dentistId: string;
+    patientId: string;
+    dentistTitle: string;
+    dentistMessage: string;
+    patientTitle: string;
+    patientMessage: string;
+    appointmentData?: {
+        startTime: Date;
+        endTime?: Date;
+        dentistName: string;
+        patientName: string;
+        patientEmail?: string;
+        patientPhone?: string | null;
+    };
+    /**
+     * Context of this notification:
+     * - 'create': New appointment created (should create calendar event)
+     * - 'update': Appointment updated (should update calendar event if exists)
+     * - 'reschedule': Appointment rescheduled (should update/replace calendar event)
+     * - 'status': Status changed (should NOT create/update calendar event)
+     * - 'reminder': Reminder notification (should NOT create/update calendar event)
+     * - 'cancel': Appointment cancelled (should delete calendar event)
+     */
+    context?: 'create' | 'update' | 'reschedule' | 'status' | 'reminder' | 'cancel' | string;
+    /**
+     * Google Calendar event ID if already exists
+     */
+    googleCalendarEventId?: string | null;
 }
 
 @Injectable()
 export class NotificationsService {
     private readonly logger = new Logger(NotificationsService.name);
-    private calendarEnabled = false;
     private emailEnabled = false;
-    private readonly timezone: string;
 
     constructor(
         private prisma: PrismaService,
@@ -34,24 +63,18 @@ export class NotificationsService {
     ) {
         const rawEmailEnv = this.configService.get('ENABLE_EMAIL_NOTIFICATIONS');
         this.emailEnabled = rawEmailEnv === 'true' || rawEmailEnv === true;
-        this.timezone = this.configService.get<string>('CLINIC_TIMEZONE') || 'UTC';
-        // Don't cache calendarEnabled here, check it dynamically to avoid initialization race conditions
-
-        this.logger.log(`Notifications initialized | Email Enabled: ${this.emailEnabled} | Timezone: ${this.timezone} | Calendar Enabled: checked dynamically`);
+        this.logger.log(`Notifications initialized | Email Enabled: ${this.emailEnabled}`);
     }
 
     /**
-     * Format time for display - Uses configured clinic timezone
+     * Format time for display (uses server local timezone)
      */
     private formatTime(date: Date): string {
-        const formatted = new Intl.DateTimeFormat('en-US', {
-            hour: 'numeric',
+        return date.toLocaleTimeString('en-US', {
+            hour: '2-digit',
             minute: '2-digit',
             hour12: true,
-            timeZone: this.timezone
-        }).format(date);
-        this.logger.log(`[Trace] formatTime: input=${date.toISOString()} | timezone=${this.timezone} | formatted=${formatted}`);
-        return formatted;
+        });
     }
 
     private isCalendarEnabled(): boolean {
@@ -91,7 +114,7 @@ export class NotificationsService {
                 recipientPatientId: params.recipientPatientId,
                 title: params.title,
                 message: params.message,
-                type: params.type || 'GENERAL',
+                type: params.type || NotificationType.GENERAL,
                 metadata: params.metadata || {},
             },
         });
@@ -116,6 +139,7 @@ export class NotificationsService {
 
     /**
      * Send appointment notification to both dentist and patient
+     * @returns The Google Calendar event ID (if created/updated), or null
      */
     async createAppointmentNotification(
         dentistId: string,
@@ -126,88 +150,133 @@ export class NotificationsService {
         patientMessage: string,
         appointmentData?: {
             startTime: Date;
+            endTime?: Date;
             dentistName: string;
             patientName: string;
             patientEmail?: string;
             patientPhone?: string | null;
         },
-    ) {
-        this.logger.log(`createAppointmentNotification called for dentistId=${dentistId}, patientId=${patientId}`);
+        context: 'create' | 'update' | 'reschedule' | 'status' | 'reminder' | 'cancel' | string = 'create',
+        existingCalendarEventId?: string | null,
+    ): Promise<string | null> {
+        this.logger.log(`createAppointmentNotification called: context=${context}, dentistId=${dentistId}, patientId=${patientId}`);
+        
         const notifications: CreateNotificationParams[] = [
-            { userId: dentistId, title: dentistTitle, message: dentistMessage, type: 'APPOINTMENT_REMINDER', sendRealtime: true },
-            { recipientPatientId: patientId, title: patientTitle, message: patientMessage, type: 'APPOINTMENT_REMINDER' },
+            { userId: dentistId, title: dentistTitle, message: dentistMessage, type: NotificationType.APPOINTMENT_REMINDER, sendRealtime: true },
+            { recipientPatientId: patientId, title: patientTitle, message: patientMessage, type: NotificationType.APPOINTMENT_REMINDER },
         ];
 
-        // If we have appointment data and patient contact info, send email
-        if (appointmentData) {
-            // sendEmail: false here to avoid duplicate — email is sent directly below
-            const patientNotification: CreateNotificationParams = {
-                recipientPatientId: patientId,
-                title: patientTitle,
-                message: patientMessage,
-                type: 'APPOINTMENT_REMINDER',
-                sendRealtime: false,
-                sendEmail: false,
+        let calendarEventId: string | null = existingCalendarEventId || null;
+        const calendarEnabled = this.isCalendarEnabled();
+
+        // Handle Calendar Event based on context
+        if (appointmentData?.patientEmail && calendarEnabled) {
+            const calendarParams = {
+                patientEmail: appointmentData.patientEmail,
+                patientName: appointmentData.patientName,
+                dentistName: appointmentData.dentistName,
+                appointmentDate: appointmentData.startTime,
+                endTime: appointmentData.endTime,
             };
 
-            // Replace the patient notification with enhanced version
-            notifications[1] = patientNotification;
+            switch (context) {
+                case 'create':
+                    // New appointment - create calendar event
+                    this.logger.log(`[Calendar] Creating new calendar event for new appointment`);
+                    calendarEventId = await this.calendarService.createAppointmentEvent(calendarParams);
+                    break;
 
-            // Send email directly
-            const calendarEnabled = this.isCalendarEnabled();
-            this.logger.log(`[Trace] createAppointmentNotification: patientEmail=${appointmentData.patientEmail}, emailEnabled=${this.emailEnabled}, calendarEnabled=${calendarEnabled}, timezone=${this.timezone}`);
+                case 'reschedule':
+                    // Rescheduled - delete old event and create new one
+                    if (existingCalendarEventId) {
+                        this.logger.log(`[Calendar] Deleting old calendar event ${existingCalendarEventId} and creating new one for reschedule`);
+                        await this.calendarService.deleteAppointmentEvent(existingCalendarEventId);
+                    }
+                    calendarEventId = await this.calendarService.createAppointmentEvent(calendarParams);
+                    break;
 
-            if (appointmentData.patientEmail && this.emailEnabled) {
-                this.logger.log(`[Trace] Formatting time for email. Input UTC: ${appointmentData.startTime.toISOString()}`);
-                const timeStr = this.formatTime(appointmentData.startTime);
-                this.logger.log(`[Trace] Email time formatted: ${timeStr}`);
+                case 'update':
+                    // Updated (but not rescheduled) - update existing event
+                    if (existingCalendarEventId) {
+                        this.logger.log(`[Calendar] Updating existing calendar event ${existingCalendarEventId}`);
+                        calendarEventId = await this.calendarService.updateAppointmentEvent(existingCalendarEventId, calendarParams);
+                    } else {
+                        // No existing event, create one
+                        this.logger.log(`[Calendar] No existing event to update, creating new one`);
+                        calendarEventId = await this.calendarService.createAppointmentEvent(calendarParams);
+                    }
+                    break;
 
-            if (patientTitle === 'Appointment Confirmed') {
-                await this.emailService.sendAppointmentConfirmation({
-                    to: appointmentData.patientEmail,
-                    patientName: appointmentData.patientName,
-                    dentistName: appointmentData.dentistName,
-                    appointmentDate: appointmentData.startTime,
-                    appointmentTime: timeStr,
-                });
-            } else if (patientTitle.includes('Reminder') || patientMessage.includes('reminder') || patientMessage.includes('Reminder')) {
-                // Send reminder email for appointment reminders
-                await this.emailService.sendAppointmentReminder({
-                    to: appointmentData.patientEmail,
-                    patientName: appointmentData.patientName,
-                    dentistName: appointmentData.dentistName,
-                    appointmentDate: appointmentData.startTime,
-                    appointmentTime: timeStr,
-                });
-            } else {
-                await this.emailService.sendAppointmentUpdate({
-                    to: appointmentData.patientEmail,
-                    patientName: appointmentData.patientName,
-                    dentistName: appointmentData.dentistName,
-                    appointmentDate: appointmentData.startTime,
-                    appointmentTime: timeStr,
-                    updateType: patientTitle,
-                    updateMessage: patientMessage,
-                });
-            }
-                this.logger.log(`Appointment email sent to ${appointmentData.patientEmail} (Type: ${patientTitle})`);
-            }
+                case 'cancel':
+                    // Cancelled - delete calendar event
+                    if (existingCalendarEventId) {
+                        this.logger.log(`[Calendar] Deleting calendar event ${existingCalendarEventId} for cancelled appointment`);
+                        await this.calendarService.deleteAppointmentEvent(existingCalendarEventId);
+                        calendarEventId = null;
+                    }
+                    break;
 
-            // Instead of SMS, send a Calendar Invite for appointment confirmations
-            if (appointmentData.patientEmail && calendarEnabled) {
-                this.logger.log(`[Trace] Creating calendar event for ${appointmentData.patientEmail}`);
-                await this.calendarService.createAppointmentEvent({
-                    patientEmail: appointmentData.patientEmail,
-                    patientName: appointmentData.patientName,
-                    dentistName: appointmentData.dentistName,
-                    appointmentDate: appointmentData.startTime,
-                });
-            } else {
-                this.logger.log(`[Trace] Skipping calendar event - patientEmail: ${appointmentData.patientEmail}, calendarEnabled: ${calendarEnabled}`);
+                case 'status':
+                case 'reminder':
+                    // Status changes and reminders - don't touch calendar events
+                    this.logger.log(`[Calendar] Skipping calendar event for context: ${context}`);
+                    calendarEventId = existingCalendarEventId || null;
+                    break;
+
+                default:
+                    this.logger.warn(`[Calendar] Unknown context: ${context}, skipping calendar event`);
+                    calendarEventId = existingCalendarEventId || null;
             }
         }
 
-        return this.createMultiple(notifications);
+        // Send email based on context
+        if (appointmentData?.patientEmail && this.emailEnabled) {
+            const timeStr = this.formatTime(appointmentData.startTime);
+            
+            switch (context) {
+                case 'create':
+                    await this.emailService.sendAppointmentConfirmation({
+                        to: appointmentData.patientEmail,
+                        patientName: appointmentData.patientName,
+                        dentistName: appointmentData.dentistName,
+                        appointmentDate: appointmentData.startTime,
+                        appointmentTime: timeStr,
+                    });
+                    break;
+
+                case 'reminder':
+                    await this.emailService.sendAppointmentReminder({
+                        to: appointmentData.patientEmail,
+                        patientName: appointmentData.patientName,
+                        dentistName: appointmentData.dentistName,
+                        appointmentDate: appointmentData.startTime,
+                        appointmentTime: timeStr,
+                    });
+                    break;
+
+                case 'cancel':
+                    // Could add a cancellation email here if needed
+                    this.logger.log(`Appointment cancelled - email notification skipped`);
+                    break;
+
+                default:
+                    // Update, reschedule, status - send update email
+                    await this.emailService.sendAppointmentUpdate({
+                        to: appointmentData.patientEmail,
+                        patientName: appointmentData.patientName,
+                        dentistName: appointmentData.dentistName,
+                        appointmentDate: appointmentData.startTime,
+                        appointmentTime: timeStr,
+                        updateType: patientTitle,
+                        updateMessage: patientMessage,
+                    });
+            }
+            
+            this.logger.log(`Appointment email sent to ${appointmentData.patientEmail} (Context: ${context})`);
+        }
+
+        await this.createMultiple(notifications);
+        return calendarEventId;
     }
 
     /**
@@ -240,13 +309,13 @@ export class NotificationsService {
             recipientPatientId: patientId,
             title: 'Appointment Reminder',
             message: `Reminder: Your appointment with Dr. ${dentistName} is tomorrow at ${timeStr}`,
-            type: 'APPOINTMENT_REMINDER',
+            type: NotificationType.APPOINTMENT_REMINDER,
             sendRealtime: false,
         });
     }
 
     /**
-     * Send invoice notification via email and SMS
+     * Send invoice notification via email
      */
     async sendInvoiceNotification(
         patientId: string,
@@ -274,7 +343,7 @@ export class NotificationsService {
             recipientPatientId: patientId,
             title: 'New Invoice Available',
             message: `Invoice #${invoiceNumber} for $${amount.toFixed(2)} is now available. Due date: ${dueDate.toLocaleDateString()}`,
-            type: 'PAYMENT_DUE',
+            type: NotificationType.PAYMENT_DUE,
             sendRealtime: false,
         });
     }
@@ -303,7 +372,7 @@ export class NotificationsService {
             recipientPatientId: patientId,
             title: 'Welcome to Brilliant Dental',
             message: 'Your account has been created successfully. Welcome to our clinic!',
-            type: 'GENERAL',
+            type: NotificationType.SYSTEM,
             sendRealtime: false,
         });
     }

@@ -135,26 +135,35 @@ export class AppointmentsService {
 
         try {
             const appointment = await this.prisma.appointment.create({
-                data: {
-                    patientId: dto.patientId,
-                    dentistId: dto.dentistId,
-                    title: dto.title,
-                    description: dto.description,
-                    startTime: new Date(dto.startTime),
-                    endTime: new Date(dto.endTime),
-                    type: dto.type,
-                    notes: dto.notes,
-                },
-                include: {
-                    patient: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
-                    dentist: { select: { id: true, firstName: true, lastName: true } },
-                },
+            data: {
+                patientId: dto.patientId,
+                dentistId: dto.dentistId,
+                title: dto.title,
+                description: dto.description,
+                startTime: new Date(dto.startTime),
+                endTime: new Date(dto.endTime),
+                type: dto.type,
+                notes: dto.notes,
+            },
+            include: {
+                patient: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+                dentist: { select: { id: true, firstName: true, lastName: true } },
+            },
+        });
+
+        // Notify BOTH dentist AND patient - this will also create the calendar event
+        const calendarEventId = await this.notifyAppointmentCreated(appointment);
+
+        // If calendar event was created, store the event ID
+        if (calendarEventId) {
+            await this.prisma.appointment.update({
+                where: { id: appointment.id },
+                data: { googleCalendarEventId: calendarEventId },
             });
+            this.logger.log(`[CREATE] Stored Google Calendar event ID: ${calendarEventId} for appointment ${appointment.id}`);
+        }
 
-            // Notify BOTH dentist AND patient
-            await this.notifyAppointmentCreated(appointment);
-
-            return appointment;
+        return appointment;
         } catch (error) {
             throw new BadRequestException('Could not create appointment: ' + error.message);
         }
@@ -292,6 +301,10 @@ export class AppointmentsService {
 
         console.log(`[UPDATE] Filtered data keys:`, Object.keys(data));
 
+        // Store old date/time before updating for comparison
+        const oldStartTime = oldAppointment.startTime;
+        const oldStatus = oldAppointment.status;
+
         try {
             if (data.startTime) data.startTime = new Date(data.startTime);
             if (data.endTime) data.endTime = new Date(data.endTime);
@@ -310,8 +323,21 @@ export class AppointmentsService {
             },
         });
 
+        // Determine what changed to pass correct context to notification
+        const dateChanged = oldStartTime.getTime() !== appointment.startTime.getTime();
+        const statusChanged = oldStatus !== appointment.status;
+
         // Notify BOTH dentist AND patient if status changed or rescheduled
-        await this.notifyAppointmentUpdated(appointment, oldAppointment);
+        const newCalendarEventId = await this.notifyAppointmentUpdated(appointment, oldAppointment, oldAppointment.googleCalendarEventId);
+
+        // If calendar event was created/updated, update the database
+        if (newCalendarEventId !== undefined && newCalendarEventId !== oldAppointment.googleCalendarEventId) {
+            await this.prisma.appointment.update({
+                where: { id: appointment.id },
+                data: { googleCalendarEventId: newCalendarEventId },
+            });
+            this.logger.log(`[UPDATE] Updated Google Calendar event ID: ${newCalendarEventId} for appointment ${appointment.id}`);
+        }
 
         return appointment;
     }
@@ -319,25 +345,8 @@ export class AppointmentsService {
     async remove(id: string) {
         const appointment = await this.findOne(id);
 
-        // Notify about cancellation
-        const timeStr = this.formatTime(appointment.startTime);
-        const dateStr = this.formatDate(appointment.startTime);
-
-        await this.notificationsService.createAppointmentNotification(
-            appointment.dentistId,
-            appointment.patientId,
-            'Appointment Cancelled',
-            `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} on ${dateStr} at ${timeStr} has been cancelled`,
-            'Appointment Cancelled',
-            `Your appointment with Dr. ${appointment.dentist?.firstName} ${appointment.dentist?.lastName} on ${dateStr} at ${timeStr} has been cancelled`,
-            {
-                startTime: appointment.startTime,
-                dentistName: `${appointment.dentist?.firstName} ${appointment.dentist?.lastName}`,
-                patientName: `${appointment.patient?.firstName} ${appointment.patient?.lastName}`,
-                patientEmail: appointment.patient?.email ?? undefined,
-                patientPhone: appointment.patient?.phone ?? undefined,
-            }
-        );
+        // Notify about cancellation - this will also delete the calendar event if it exists
+        await this.notifyAppointmentCancelled(appointment);
 
         return this.prisma.appointment.delete({ where: { id } });
     }
@@ -445,6 +454,7 @@ export class AppointmentsService {
     private async sendReminder(apt: any, reminderTitle: string) {
         const timeStr = this.formatTime(apt.startTime);
 
+        // Reminders should NOT create/update calendar events
         await this.notificationsService.createAppointmentNotification(
             apt.dentistId,
             apt.patientId,
@@ -454,23 +464,26 @@ export class AppointmentsService {
             `Reminder: You have an appointment with Dr. ${apt.dentist.firstName} ${apt.dentist.lastName} at ${timeStr}`,
             {
                 startTime: apt.startTime,
+                endTime: apt.endTime,
                 dentistName: `${apt.dentist?.firstName} ${apt.dentist?.lastName}`,
                 patientName: `${apt.patient?.firstName} ${apt.patient?.lastName}`,
                 patientEmail: apt.patient?.email ?? undefined,
                 patientPhone: apt.patient?.phone ?? undefined,
-            }
+            },
+            'reminder', // Context: reminders should NOT create calendar events
+            undefined // No calendar event ID needed for reminders
         );
 
         this.logger.log(`[Reminders] Successfully sent ${reminderTitle} to patient ${apt.patient.firstName} ${apt.patient.lastName}`);
     }
 
-    private async notifyAppointmentCreated(appointment: any) {
+    private async notifyAppointmentCreated(appointment: any): Promise<string | null> {
         console.log("=> notifyAppointmentCreated triggered. Patient Email:", appointment.patient?.email, "Patient Phone:", appointment.patient?.phone);
         const timeStr = this.formatTime(appointment.startTime);
         const dateStr = this.formatDate(appointment.startTime);
 
-        // Notify BOTH dentist AND patient with email
-        await this.notificationsService.createAppointmentNotification(
+        // Notify BOTH dentist AND patient with email - context is 'create' for new appointments
+        const calendarEventId = await this.notificationsService.createAppointmentNotification(
             appointment.dentistId,
             appointment.patientId,
             'New Appointment Scheduled',
@@ -479,15 +492,20 @@ export class AppointmentsService {
             `Your appointment with Dr. ${appointment.dentist?.firstName} ${appointment.dentist?.lastName} has been scheduled for ${dateStr} at ${timeStr}`,
             {
                 startTime: appointment.startTime,
+                endTime: appointment.endTime,
                 dentistName: `${appointment.dentist?.firstName} ${appointment.dentist?.lastName}`,
                 patientName: `${appointment.patient?.firstName} ${appointment.patient?.lastName}`,
                 patientEmail: appointment.patient?.email ?? undefined,
                 patientPhone: appointment.patient?.phone ?? undefined,
-            }
+            },
+            'create', // context
+            undefined // no existing calendar event
         );
+
+        return calendarEventId;
     }
 
-    private async notifyAppointmentUpdated(appointment: any, oldData: any) {
+    private async notifyAppointmentUpdated(appointment: any, oldData: any, existingCalendarEventId?: string | null): Promise<string | null> {
         const timeStr = this.formatTime(appointment.startTime);
         const dateStr = this.formatDate(appointment.startTime);
 
@@ -495,27 +513,36 @@ export class AppointmentsService {
         let patientMessage = '';
         let dentistTitle = 'Appointment Updated';
         let patientTitle = 'Appointment Update';
+        let context: 'reschedule' | 'status' | 'update' | 'cancel' = 'update';
 
-        if (oldData.startTime.getTime() !== appointment.startTime.getTime()) {
+        const dateChanged = oldData.startTime.getTime() !== appointment.startTime.getTime();
+        const statusChanged = oldData.status !== appointment.status;
+
+        if (dateChanged) {
             dentistMessage = `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} rescheduled to ${dateStr} at ${timeStr}`;
             patientMessage = `Your appointment has been rescheduled to ${dateStr} at ${timeStr}`;
             dentistTitle = 'Appointment Rescheduled';
             patientTitle = 'Appointment Rescheduled';
-        } else if (appointment.status !== oldData.status) {
+            context = 'reschedule';
+        } else if (statusChanged) {
             dentistMessage = `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} status changed to ${appointment.status}`;
             patientMessage = `Your appointment status has been updated to ${appointment.status}`;
             if (appointment.status === 'CANCELLED') {
                 dentistTitle = 'Appointment Cancelled';
                 patientTitle = 'Appointment Cancelled';
                 patientMessage = 'Your appointment has been cancelled';
+                context = 'cancel';
+            } else {
+                context = 'status';
             }
         } else {
             dentistMessage = `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} has been updated`;
             patientMessage = 'Your appointment details have been updated';
+            context = 'update';
         }
 
         // Notify BOTH dentist AND patient with email for updates
-        await this.notificationsService.createAppointmentNotification(
+        const calendarEventId = await this.notificationsService.createAppointmentNotification(
             appointment.dentistId,
             appointment.patientId,
             dentistTitle,
@@ -524,11 +551,41 @@ export class AppointmentsService {
             patientMessage,
             {
                 startTime: appointment.startTime,
+                endTime: appointment.endTime,
                 dentistName: `${appointment.dentist?.firstName} ${appointment.dentist?.lastName}`,
                 patientName: `${appointment.patient?.firstName} ${appointment.patient?.lastName}`,
                 patientEmail: appointment.patient?.email ?? undefined,
                 patientPhone: appointment.patient?.phone ?? undefined,
-            }
+            },
+            context,
+            appointment.googleCalendarEventId
+        );
+
+        return calendarEventId;
+    }
+
+    private async notifyAppointmentCancelled(appointment: any): Promise<void> {
+        const timeStr = this.formatTime(appointment.startTime);
+        const dateStr = this.formatDate(appointment.startTime);
+
+        // Notify about cancellation - context is 'cancel' which will delete calendar event
+        await this.notificationsService.createAppointmentNotification(
+            appointment.dentistId,
+            appointment.patientId,
+            'Appointment Cancelled',
+            `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} on ${dateStr} at ${timeStr} has been cancelled`,
+            'Appointment Cancelled',
+            `Your appointment with Dr. ${appointment.dentist?.firstName} ${appointment.dentist?.lastName} on ${dateStr} at ${timeStr} has been cancelled`,
+            {
+                startTime: appointment.startTime,
+                endTime: appointment.endTime,
+                dentistName: `${appointment.dentist?.firstName} ${appointment.dentist?.lastName}`,
+                patientName: `${appointment.patient?.firstName} ${appointment.patient?.lastName}`,
+                patientEmail: appointment.patient?.email ?? undefined,
+                patientPhone: appointment.patient?.phone ?? undefined,
+            },
+            'cancel',
+            appointment.googleCalendarEventId
         );
     }
 }
