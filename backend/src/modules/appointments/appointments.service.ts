@@ -11,6 +11,7 @@ export class AppointmentsService {
     private readonly logger = new Logger(AppointmentsService.name);
 
     private readonly timezone: string;
+    private readonly defaultLanguage: 'en' | 'es';
 
     constructor(
         private prisma: PrismaService,
@@ -18,6 +19,8 @@ export class AppointmentsService {
         private configService: ConfigService,
     ) {
         this.timezone = this.configService.get<string>('CLINIC_TIMEZONE') || 'UTC';
+        const appLang = this.configService.get<string>('APP_LANGUAGE') || 'es';
+        this.defaultLanguage = appLang === 'en' ? 'en' : 'es';
     }
 
     /**
@@ -509,35 +512,49 @@ export class AppointmentsService {
         const timeStr = this.formatTime(appointment.startTime);
         const dateStr = this.formatDate(appointment.startTime);
 
+        const isSpanish = this.defaultLanguage === 'es';
+
         let dentistMessage = '';
         let patientMessage = '';
-        let dentistTitle = 'Appointment Updated';
-        let patientTitle = 'Appointment Update';
+        let dentistTitle = isSpanish ? 'Cita Actualizada' : 'Appointment Updated';
+        let patientTitle = isSpanish ? 'Cita Actualizada' : 'Appointment Update';
         let context: 'reschedule' | 'status' | 'update' | 'cancel' = 'update';
 
         const dateChanged = oldData.startTime.getTime() !== appointment.startTime.getTime();
         const statusChanged = oldData.status !== appointment.status;
 
         if (dateChanged) {
-            dentistMessage = `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} rescheduled to ${dateStr} at ${timeStr}`;
-            patientMessage = `Your appointment has been rescheduled to ${dateStr} at ${timeStr}`;
-            dentistTitle = 'Appointment Rescheduled';
-            patientTitle = 'Appointment Rescheduled';
+            dentistMessage = isSpanish 
+                ? `Cita con ${appointment.patient?.firstName} ${appointment.patient?.lastName} reprogramada para el ${dateStr} a las ${timeStr}`
+                : `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} rescheduled to ${dateStr} at ${timeStr}`;
+            patientMessage = isSpanish 
+                ? `Tu cita ha sido reprogramada para el ${dateStr} a las ${timeStr}`
+                : `Your appointment has been rescheduled to ${dateStr} at ${timeStr}`;
+            dentistTitle = isSpanish ? 'Cita Reprogramada' : 'Appointment Rescheduled';
+            patientTitle = isSpanish ? 'Cita Reprogramada' : 'Appointment Rescheduled';
             context = 'reschedule';
         } else if (statusChanged) {
-            dentistMessage = `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} status changed to ${appointment.status}`;
-            patientMessage = `Your appointment status has been updated to ${appointment.status}`;
+            dentistMessage = isSpanish 
+                ? `Cita con ${appointment.patient?.firstName} ${appointment.patient?.lastName} cambiada a ${appointment.status}`
+                : `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} status changed to ${appointment.status}`;
+            patientMessage = isSpanish 
+                ? `El estado de tu cita ha sido actualizado a ${appointment.status}`
+                : `Your appointment status has been updated to ${appointment.status}`;
             if (appointment.status === 'CANCELLED') {
-                dentistTitle = 'Appointment Cancelled';
-                patientTitle = 'Appointment Cancelled';
-                patientMessage = 'Your appointment has been cancelled';
+                dentistTitle = isSpanish ? 'Cita Cancelada' : 'Appointment Cancelled';
+                patientTitle = isSpanish ? 'Cita Cancelada' : 'Appointment Cancelled';
+                patientMessage = isSpanish ? 'Tu cita ha sido cancelada' : 'Your appointment has been cancelled';
                 context = 'cancel';
             } else {
                 context = 'status';
             }
         } else {
-            dentistMessage = `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} has been updated`;
-            patientMessage = 'Your appointment details have been updated';
+            dentistMessage = isSpanish 
+                ? `Cita con ${appointment.patient?.firstName} ${appointment.patient?.lastName} ha sido actualizada`
+                : `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} has been updated`;
+            patientMessage = isSpanish 
+                ? 'Los detalles de tu cita han sido actualizados'
+                : 'Your appointment details have been updated';
             context = 'update';
         }
 
