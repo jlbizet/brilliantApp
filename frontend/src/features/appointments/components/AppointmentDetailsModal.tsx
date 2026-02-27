@@ -76,32 +76,32 @@ export default function AppointmentDetailsModal({ isOpen, onClose, appointment, 
                                     </div>
                                     <div className="flex gap-2">
                                         {['ADMIN', 'DENTIST', 'RECEPTIONIST'].includes(user?.role as string) && (
-                        <button onClick={() => {
-                            if (isEditing) {
-                                // Only send primitive fields, exclude objects like patient, dentist
-                                const allowedFields = [
-                                    'patientId', 'dentistId', 'title', 'description',
-                                    'startTime', 'endTime', 'type', 'notes',
-                                    'status', 'isRecurring', 'recurringPattern', 'recurringEndDate'
-                                ];
-                                const filteredData: any = {};
-                                allowedFields.forEach(field => {
-                                    if (editData[field] !== undefined && editData[field] !== null) {
-                                        // Only include if it's a primitive type (string, number, boolean)
-                                        const value = editData[field];
-                                        const type = typeof value;
-                                        if (type === 'string' || type === 'number' || type === 'boolean') {
-                                            filteredData[field] = value;
-                                        }
-                                    }
-                                });
-                                console.log('[Frontend] Update payload:', JSON.stringify(filteredData, null, 2));
-                                onUpdate(appointment.id, filteredData);
-                                setIsEditing(false);
-                            } else {
-                                setIsEditing(true);
-                            }
-                        }} className="text-primary-500 hover:text-primary-600 font-bold text-sm px-2">
+                                            <button onClick={() => {
+                                                if (isEditing) {
+                                                    // Only send primitive fields, exclude objects like patient, dentist
+                                                    const allowedFields = [
+                                                        'patientId', 'dentistId', 'title', 'description',
+                                                        'startTime', 'endTime', 'type', 'notes',
+                                                        'status', 'isRecurring', 'recurringPattern', 'recurringEndDate'
+                                                    ];
+                                                    const filteredData: any = {};
+                                                    allowedFields.forEach(field => {
+                                                        if (editData[field] !== undefined && editData[field] !== null) {
+                                                            // Only include if it's a primitive type (string, number, boolean)
+                                                            const value = editData[field];
+                                                            const type = typeof value;
+                                                            if (type === 'string' || type === 'number' || type === 'boolean') {
+                                                                filteredData[field] = value;
+                                                            }
+                                                        }
+                                                    });
+                                                    console.log('[Frontend] Update payload:', JSON.stringify(filteredData, null, 2));
+                                                    onUpdate(appointment.id, filteredData);
+                                                    setIsEditing(false);
+                                                } else {
+                                                    setIsEditing(true);
+                                                }
+                                            }} className="text-primary-500 hover:text-primary-600 font-bold text-sm px-2">
                                                 {isEditing ? t('common.save') : t('common.edit')}
                                             </button>
                                         )}
@@ -160,26 +160,53 @@ export default function AppointmentDetailsModal({ isOpen, onClose, appointment, 
                                         <div className="space-y-1">
                                             <p className="text-gray-500 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {t('common.time')}</p>
                                             {isEditing ? (
-                                                <TimePicker
-                                                    value={new Date(editData.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                                                    onChange={time => {
-                                                        const [hours, minutes] = time.split(':').map(Number);
-                                                        const newStart = new Date(editData.startTime);
-                                                        newStart.setHours(hours, minutes, 0, 0);
+                                                <div className="space-y-3">
+                                                    <TimePicker
+                                                        value={new Date(editData.startTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                                        onChange={time => {
+                                                            const [hours, minutes] = time.split(':').map(Number);
+                                                            const newStart = new Date(editData.startTime);
+                                                            newStart.setHours(hours, minutes, 0, 0);
 
-                                                        const currentStart = new Date(editData.startTime);
-                                                        const currentEnd = new Date(editData.endTime);
-                                                        const duration = currentEnd.getTime() - currentStart.getTime();
+                                                            const currentStart = new Date(editData.startTime);
+                                                            const currentEnd = new Date(editData.endTime);
+                                                            const duration = currentEnd.getTime() - currentStart.getTime();
 
-                                                        setEditData({
-                                                            ...editData,
-                                                            startTime: toISOString(newStart),
-                                                            endTime: toISOString(new Date(newStart.getTime() + duration))
-                                                        });
-                                                    }}
-                                                    className="py-1"
-                                                    minuteStep={15}
-                                                />
+                                                            setEditData({
+                                                                ...editData,
+                                                                startTime: toISOString(newStart),
+                                                                endTime: toISOString(new Date(newStart.getTime() + duration))
+                                                            });
+                                                        }}
+                                                        className="py-1"
+                                                        minuteStep={15}
+                                                    />
+                                                    <div className="flex gap-2">
+                                                        {[15, 30, 45, 60].map(mins => {
+                                                            const currentDuration = editData.startTime && editData.endTime
+                                                                ? Math.round((new Date(editData.endTime).getTime() - new Date(editData.startTime).getTime()) / 60000)
+                                                                : 0;
+                                                            const isSelected = mins === currentDuration;
+                                                            return (
+                                                                <button
+                                                                    key={mins}
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const start = new Date(editData.startTime);
+                                                                        const end = new Date(start.getTime() + mins * 60000);
+                                                                        setEditData({ ...editData, endTime: toISOString(end) });
+                                                                    }}
+                                                                    className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all ${isSelected
+                                                                        ? 'bg-primary-600 text-white shadow-sm ring-2 ring-primary-500 ring-offset-1 dark:ring-offset-gray-900'
+                                                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20'
+                                                                        }`}
+                                                                >
+                                                                    {mins}m
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
                                             ) : (
                                                 <p className="font-medium text-gray-900 dark:text-white">
                                                     {format(new Date(appointment.startTime), 'h:mm a')} - {format(new Date(appointment.endTime), 'h:mm a')}

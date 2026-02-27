@@ -142,13 +142,28 @@ export default function AppointmentsPage() {
                             </div>
                         ))}
                     </div>
-                    <button
-                        onClick={() => setShowForm(true)}
-                        className="btn-primary flex items-center gap-2 px-6 py-2.5 rounded-xl shadow-lg shadow-primary-500/20 hover:shadow-primary-500/40 transition-all transform hover:-translate-y-0.5"
-                    >
-                        <Plus className="w-5 h-5" />
-                        <span className="font-bold">{t('appointments.new')}</span>
-                    </button>
+        <button
+          onClick={() => {
+            // Reset form data when creating new appointment
+            setFormData({
+              patientId: '',
+              dentistId: '',
+              title: '',
+              type: 'general',
+              startTime: '',
+              endTime: '',
+              notes: '',
+              isRecurring: false,
+              recurringPattern: 'weekly',
+              recurringEndDate: '',
+            });
+            setShowForm(true);
+          }}
+          className="btn-primary flex items-center gap-2 px-6 py-2.5 rounded-xl shadow-lg shadow-primary-500/20 hover:shadow-primary-500/40 transition-all transform hover:-translate-y-0.5"
+        >
+          <Plus className="w-5 h-5" />
+          <span className="font-bold">{t('appointments.new')}</span>
+        </button>
                 </div>
             </div>
 
@@ -233,14 +248,31 @@ export default function AppointmentsPage() {
                                 <div className="md:col-span-3">
                                     <label className="label">{t('appointments.duration')}</label>
                                     <div className="flex gap-2 mb-2">
-                                        {[15, 30, 45, 60].map(mins => (
-                                            <button type="button" key={mins} onClick={() => {
-                                                if (!formData.startTime) return;
-                                                const start = new Date(formData.startTime);
-                                                const end = new Date(start.getTime() + mins * 60000);
-                                                setFormData({ ...formData, endTime: toISOString(end) });
-                                            }} className="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 hover:bg-primary-100 hover:text-primary-700 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-primary-900/30 transition-colors">{mins}m</button>
-                                        ))}
+                                        {[15, 30, 45, 60].map(mins => {
+                                            const currentDuration = formData.startTime && formData.endTime
+                                                ? Math.round((new Date(formData.endTime).getTime() - new Date(formData.startTime).getTime()) / 60000)
+                                                : 0;
+                                            const isSelected = mins === currentDuration;
+
+                                            return (
+                                                <button
+                                                    type="button"
+                                                    key={mins}
+                                                    onClick={() => {
+                                                        if (!formData.startTime) return;
+                                                        const start = new Date(formData.startTime);
+                                                        const end = new Date(start.getTime() + mins * 60000);
+                                                        setFormData({ ...formData, endTime: toISOString(end) });
+                                                    }}
+                                                    className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${isSelected
+                                                        ? 'bg-primary-600 text-white shadow-sm ring-2 ring-primary-500 ring-offset-1 dark:ring-offset-gray-900'
+                                                        : 'bg-gray-100 text-gray-700 hover:bg-primary-100 hover:text-primary-700 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-primary-900/30'
+                                                        }`}
+                                                >
+                                                    {mins}m
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                                 <div className="md:col-span-3"><label className="label">{t('common.notes')}</label><textarea className="input-field" rows={2} value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} /></div>

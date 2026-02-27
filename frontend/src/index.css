@@ -19,43 +19,23 @@
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white
-      bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl
-      shadow-md shadow-primary-500/20
-      hover:from-primary-500 hover:to-primary-600
-      focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2
-      transition-all duration-200 active:scale-[0.98]
-      disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-primary-600 to-primary-700 rounded-xl shadow-md shadow-primary-500/20 hover:from-primary-500 hover:to-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium
-      text-gray-700 dark:text-gray-200
-      bg-white dark:bg-gray-800
-      border border-gray-300 dark:border-gray-600 rounded-xl
-      hover:bg-gray-50 dark:hover:bg-gray-700
-      focus:outline-none focus:ring-2 focus:ring-gray-300
-      transition-all duration-200 active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-all duration-200 active:scale-[0.98];
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white
-      bg-gradient-to-r from-red-500 to-red-600 rounded-xl
-      hover:from-red-400 hover:to-red-500
-      transition-all duration-200 active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-red-500 to-red-600 rounded-xl hover:from-red-400 hover:to-red-500 transition-all duration-200 active:scale-[0.98];
   }
 
   .card {
-    @apply bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800
-      shadow-card p-6 transition-shadow duration-200 hover:shadow-glow;
+    @apply bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-card p-6 transition-shadow duration-200 hover:shadow-glow;
   }
 
   .input-field {
-    @apply w-full px-4 py-2.5 text-sm bg-white dark:bg-gray-800
-      border border-gray-300 dark:border-gray-600 rounded-xl
-      focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400
-      placeholder-gray-400 dark:placeholder-gray-500
-      transition-all duration-200;
+    @apply w-full px-4 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-primary-400 placeholder-gray-400 dark:placeholder-gray-500 transition-all duration-200;
   }
 
   .label {
@@ -75,11 +55,25 @@
     @apply inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full;
   }
 
-  .badge-success { @apply bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400; }
-  .badge-warning { @apply bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400; }
-  .badge-danger  { @apply bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400; }
-  .badge-info    { @apply bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400; }
-  .badge-neutral { @apply bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400; }
+  .badge-success {
+    @apply bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400;
+  }
+
+  .badge-warning {
+    @apply bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400;
+  }
+
+  .badge-danger {
+    @apply bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400;
+  }
+
+  .badge-info {
+    @apply bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400;
+  }
+
+  .badge-neutral {
+    @apply bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400;
+  }
 
   .table-container {
     @apply overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800;
@@ -158,7 +152,7 @@
 }
 
 .fc .fc-v-event {
-  @apply bg-primary-600 !important;
+  @apply border-0 px-2 py-1 !important;
 }
 
 .fc .fc-timegrid-now-indicator-arrow {
@@ -174,10 +168,23 @@
 }
 
 /* Custom scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { @apply bg-gray-300 dark:bg-gray-700 rounded-full; }
-::-webkit-scrollbar-thumb:hover { @apply bg-gray-400 dark:bg-gray-600; }
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-600;
+}
 
 /* Smooth transitions for dark mode */
-html { transition: background-color 0.3s, color 0.3s; }
+html {
+  transition: background-color 0.3s, color 0.3s;
+}
