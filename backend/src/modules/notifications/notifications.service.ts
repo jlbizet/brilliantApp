@@ -162,25 +162,34 @@ export class NotificationsService {
                 const timeStr = this.formatTime(appointmentData.startTime);
                 this.logger.log(`[Trace] Email time formatted: ${timeStr}`);
 
-                if (patientTitle === 'Appointment Confirmed') {
-                    await this.emailService.sendAppointmentConfirmation({
-                        to: appointmentData.patientEmail,
-                        patientName: appointmentData.patientName,
-                        dentistName: appointmentData.dentistName,
-                        appointmentDate: appointmentData.startTime,
-                        appointmentTime: timeStr,
-                    });
-                } else {
-                    await this.emailService.sendAppointmentUpdate({
-                        to: appointmentData.patientEmail,
-                        patientName: appointmentData.patientName,
-                        dentistName: appointmentData.dentistName,
-                        appointmentDate: appointmentData.startTime,
-                        appointmentTime: timeStr,
-                        updateType: patientTitle,
-                        updateMessage: patientMessage,
-                    });
-                }
+            if (patientTitle === 'Appointment Confirmed') {
+                await this.emailService.sendAppointmentConfirmation({
+                    to: appointmentData.patientEmail,
+                    patientName: appointmentData.patientName,
+                    dentistName: appointmentData.dentistName,
+                    appointmentDate: appointmentData.startTime,
+                    appointmentTime: timeStr,
+                });
+            } else if (patientTitle.includes('Reminder') || patientMessage.includes('reminder') || patientMessage.includes('Reminder')) {
+                // Send reminder email for appointment reminders
+                await this.emailService.sendAppointmentReminder({
+                    to: appointmentData.patientEmail,
+                    patientName: appointmentData.patientName,
+                    dentistName: appointmentData.dentistName,
+                    appointmentDate: appointmentData.startTime,
+                    appointmentTime: timeStr,
+                });
+            } else {
+                await this.emailService.sendAppointmentUpdate({
+                    to: appointmentData.patientEmail,
+                    patientName: appointmentData.patientName,
+                    dentistName: appointmentData.dentistName,
+                    appointmentDate: appointmentData.startTime,
+                    appointmentTime: timeStr,
+                    updateType: patientTitle,
+                    updateMessage: patientMessage,
+                });
+            }
                 this.logger.log(`Appointment email sent to ${appointmentData.patientEmail} (Type: ${patientTitle})`);
             }
 

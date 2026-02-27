@@ -53,4 +53,18 @@ export class AppointmentsController {
     remove(@Param('id') id: string) {
         return this.appointmentsService.remove(id);
     }
+
+    @Post('test-reminders')
+    @ApiOperation({ summary: 'Manually trigger reminder emails for tomorrow (TEST ONLY)' })
+    async testReminders() {
+        await this.appointmentsService.handleReminders();
+        return { message: 'Reminder check triggered. Check server logs for results.' };
+    }
+
+    @Post('test-same-day-reminders')
+    @ApiOperation({ summary: 'Manually trigger same-day reminder emails (TEST ONLY)' })
+    async testSameDayReminders() {
+        await this.appointmentsService.handleSameDayReminders();
+        return { message: 'Same-day reminder check triggered. Check server logs for results.' };
+    }
 }
