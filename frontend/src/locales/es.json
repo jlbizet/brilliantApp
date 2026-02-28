@@ -31,7 +31,9 @@
     "dentist": "Dentista",
     "title": "Título",
     "type": "Tipo",
-    "notes": "Notas"
+    "notes": "Notas",
+    "download": "Descargar",
+    "preview": "Vista Previa"
   },
     "dashboard": {
         "title": "Tablero",
@@ -414,5 +416,32 @@
         "total_staff": "Personal Total",
         "active_staff": "Personal Activo",
         "dentists": "Dentistas"
+    },
+    "documents": {
+        "title": "Documentos del Paciente",
+        "upload_button": "Subir Documento",
+        "upload_new_file": "Subir Nuevo Archivo",
+        "select_file": "Seleccionar Archivo",
+        "description_placeholder": "Breve nota sobre este archivo",
+        "confirm_upload": "Confirmar Subida",
+        "uploading": "Subiendo...",
+        "upload_success": "¡Documento subido!",
+        "upload_error": "Error al subir el documento",
+        "delete_success": "Documento eliminado",
+        "download_error": "Error al descargar",
+        "loading": "Cargando documentos...",
+        "no_documents": "No se encontraron documentos para este paciente.",
+        "type_xray": "Radiografía",
+        "type_scan": "Escaneo 3D",
+        "type_consent_form": "Formulario de Consentimiento",
+        "type_lab_result": "Resultado de Laboratorio",
+        "type_photo": "Foto Clínica",
+        "type_prescription": "Receta",
+        "type_insurance": "Documentos de Seguro",
+        "type_other": "Otro",
+        "preview_loading": "Cargando vista previa...",
+        "preview_error": "Error al cargar la vista previa",
+        "preview_not_available": "Vista previa no disponible para este tipo de archivo",
+        "docx_not_supported": "Los documentos de Word (.docx) no se pueden previsualizar. Por favor descárgalos para verlos."
     }
 }

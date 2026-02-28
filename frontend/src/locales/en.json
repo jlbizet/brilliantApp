@@ -56,7 +56,9 @@
         "page": "Page",
         "uploading": "Uploading...",
         "prescriptions": "Prescriptions",
-        "staff": "Staff Management"
+        "staff": "Staff Management",
+        "download": "Download",
+        "preview": "Preview"
     },
     "dashboard": {
         "title": "Dashboard",
@@ -359,6 +361,7 @@
         "upload_success": "Document uploaded!",
         "upload_error": "Upload failed",
         "delete_success": "Document deleted",
+        "download_error": "Download failed",
         "loading": "Loading documents...",
         "no_documents": "No documents found for this patient.",
         "type_xray": "X-Ray",
@@ -368,7 +371,11 @@
         "type_photo": "Clinical Photo",
         "type_prescription": "Prescription",
         "type_insurance": "Insurance Docs",
-        "type_other": "Other"
+        "type_other": "Other",
+        "preview_loading": "Loading preview...",
+        "preview_error": "Error loading preview",
+        "preview_not_available": "Preview not available for this file type",
+        "docx_not_supported": "Word documents (.docx) cannot be previewed. Please download to view."
     },
     "settings": {
         "title": "Settings",

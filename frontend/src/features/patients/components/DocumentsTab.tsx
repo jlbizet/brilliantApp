@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { FileText, Upload, Trash2, Download, FileJson, FileImage, FileBox, Plus, X, FolderOpen, Image, FileSearch } from 'lucide-react';
+import { FileText, Upload, Trash2, Download, FileJson, FileImage, FileBox, Plus, X, FolderOpen, Image, FileSearch, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { documentsApi } from '../../../api';
 import type { Document, DocumentType } from '../../../types';
+import DocumentPreviewModal from './DocumentPreviewModal';
 
 interface DocumentsTabProps {
     patientId: string;
@@ -47,6 +48,7 @@ export default function DocumentsTab({ patientId }: DocumentsTabProps) {
     const { t } = useTranslation();
     const queryClient = useQueryClient();
     const [showUpload, setShowUpload] = useState(false);
+    const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
     const [uploadData, setUploadData] = useState({
         file: null as File | null,
         type: 'OTHER' as DocumentType,
@@ -79,6 +81,23 @@ export default function DocumentsTab({ patientId }: DocumentsTabProps) {
             toast.success(t('documents.delete_success') || 'Document deleted');
         },
     });
+
+    const handleDownload = async (id: string, fileName: string) => {
+        try {
+            const blob = await documentsApi.download(id);
+            const url = URL.createObjectURL(blob);
+            const link = window.document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            window.document.body.appendChild(link);
+            link.click();
+            window.document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error downloading file:', error);
+            toast.error(t('documents.download_error') || 'Download failed');
+        }
+    };
 
     if (isLoading) return (
         <div className="text-center py-12 text-gray-400">
@@ -180,7 +199,10 @@ export default function DocumentsTab({ patientId }: DocumentsTabProps) {
                                         </p>
                                     </div>
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-gray-500 hover:text-primary-600 transition-colors" title={t('common.download')}>
+                                        <button onClick={() => setSelectedDoc(doc)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-gray-500 hover:text-primary-600 transition-colors" title={t('common.preview')}>
+                                            <Eye className="w-4 h-4" />
+                                        </button>
+                                        <button onClick={() => handleDownload(doc.id, doc.name)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-gray-500 hover:text-primary-600 transition-colors" title={t('common.download')}>
                                             <Download className="w-4 h-4" />
                                         </button>
                                         <button onClick={() => deleteMutation.mutate(doc.id)} className="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl text-gray-500 hover:text-rose-500 transition-colors" title={t('common.delete')}>
@@ -207,6 +229,13 @@ export default function DocumentsTab({ patientId }: DocumentsTabProps) {
                     <p className="text-gray-500 font-medium text-lg">{t('documents.no_documents')}</p>
                     <p className="text-sm text-gray-400 mt-2">{t('documents.upload_hint') || 'Upload your first document to get started'}</p>
                 </div>
+            )}
+            
+            {selectedDoc && (
+                <DocumentPreviewModal 
+                    doc={selectedDoc} 
+                    onClose={() => setSelectedDoc(null)} 
+                />
             )}
         </div>
     );

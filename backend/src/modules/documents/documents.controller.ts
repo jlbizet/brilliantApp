@@ -1,10 +1,13 @@
-import { Controller, Get, Post, Delete, Param, Query, UseGuards, UseInterceptors, UploadedFile, Body } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Query, UseGuards, UseInterceptors, UploadedFile, Body, Res, StreamableFile } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiConsumes } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiConsumes, ApiProduces } from '@nestjs/swagger';
 import { diskStorage } from 'multer';
+import { createReadStream, existsSync } from 'fs';
+import { join } from 'path';
 import { extname } from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import type { Response } from 'express';
 import { DocumentsService } from './documents.service';
 
 const storage = diskStorage({
@@ -51,5 +54,45 @@ export class DocumentsController {
     @ApiOperation({ summary: 'Delete a document' })
     remove(@Param('id') id: string) {
         return this.documentsService.remove(id);
+    }
+
+    @Get(':id/file')
+    @ApiOperation({ summary: 'Stream file for preview' })
+    @ApiProduces('application/pdf', 'image/*', 'text/plain', 'application/octet-stream')
+    async getFile(@Param('id') id: string, @Res({ passthrough: true }) res: Response): Promise<StreamableFile | null> {
+        const doc = await this.documentsService.findOne(id);
+        
+        const filePath = join(process.cwd(), doc.filePath);
+        if (!existsSync(filePath)) {
+            return null;
+        }
+
+        res.set({
+            'Content-Type': doc.mimeType || 'application/octet-stream',
+            'Content-Disposition': `inline; filename="${encodeURIComponent(doc.name)}"`,
+        });
+
+        const stream = createReadStream(filePath);
+        return new StreamableFile(stream);
+    }
+
+    @Get(':id/download')
+    @ApiOperation({ summary: 'Download file' })
+    async downloadFile(@Param('id') id: string, @Res({ passthrough: true }) res: Response): Promise<StreamableFile | null> {
+        const doc = await this.documentsService.findOne(id);
+        
+        const filePath = join(process.cwd(), doc.filePath);
+        if (!existsSync(filePath)) {
+            return null;
+        }
+
+        res.set({
+            'Content-Type': doc.mimeType || 'application/octet-stream',
+            'Content-Disposition': `attachment; filename="${encodeURIComponent(doc.name)}"`,
+            'Content-Length': doc.fileSize,
+        });
+
+        const stream = createReadStream(filePath);
+        return new StreamableFile(stream);
     }
 }
