@@ -3,6 +3,10 @@ set -e
 
 echo "🦷 Starting Dental CRM Backend..."
 
+# Set timezone from TZ environment variable (defaults to Montevideo)
+export TZ=${TZ:-America/Montevideo}
+echo "🌍 Using timezone: $TZ"
+
 # Set default DB_HOST if not provided
 DB_HOST=${DB_HOST:-postgres}
 

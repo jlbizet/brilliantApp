@@ -407,6 +407,8 @@ export class AppointmentsService {
 
     @Cron(CronExpression.EVERY_DAY_AT_9AM, { timeZone: 'America/Montevideo' })
     async handleReminders() {
+        this.logger.log('[Reminders] Starting daily reminder check...');
+        
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         tomorrow.setHours(0, 0, 0, 0);
@@ -431,6 +433,8 @@ export class AppointmentsService {
 
     @Cron(CronExpression.EVERY_HOUR, { timeZone: 'America/Montevideo' })
     async handleSameDayReminders() {
+        this.logger.log('[SameDayReminders] Starting hourly reminder check...');
+        
         const now = new Date();
         const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
         const twoHoursAndFiveMinutesLater = new Date(now.getTime() + (2 * 60 + 5) * 60 * 1000);

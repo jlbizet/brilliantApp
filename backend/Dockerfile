@@ -38,7 +38,8 @@ FROM node:20-alpine AS production
 WORKDIR /app
 
 # Install production dependencies (dumb-init, openssl for Prisma, and netcat for health checks)
-RUN apk add --no-cache dumb-init openssl netcat-openbsd
+# Also install timezone data for cron jobs
+RUN apk add --no-cache dumb-init openssl netcat-openbsd tzdata
 
 # Create app user
 RUN addgroup -g 1001 -S nodejs && \
