@@ -26,6 +26,11 @@ export default defineConfig({
         changeOrigin: true,
         ws: true,
       },
+      '/chatbot': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        ws: true,
+      },
     },
   },
 });

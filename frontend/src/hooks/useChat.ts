@@ -14,22 +14,36 @@ interface ChatSession {
     status: string;
 }
 
+const getSocketUrl = () => {
+    // In production (Docker), use the window location
+    // In development, use localhost with the right port
+    const isProduction = import.meta.env.PROD;
+    if (isProduction) {
+        return window.location.origin;
+    }
+    return 'http://localhost:5173';
+};
+
 export const useChat = () => {
     const [socket, setSocket] = useState<Socket | null>(null);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [isTyping, setIsTyping] = useState(false);
     const [sessionId, setSessionId] = useState<string | null>(null);
+    const pendingMessageRef = useRef<string | null>(null);
+    const isStartingSessionRef = useRef(false);
+    const hasWelcomeMessageRef = useRef(false);
 
     // Initialize Socket
     useEffect(() => {
-        // Use the same URL as the API but port 3000 (since we are proxying /api/v1 in vite but socket.io needs direct port or proxy config)
-        // Vite proxy usually proxies http, for ws we need to be careful.
-        // Let's assume localhost:3000 for now as per backend config.
+        const socketUrl = getSocketUrl();
+        console.log('Connecting to socket at:', socketUrl);
+        
         const token = localStorage.getItem('accessToken');
-        const newSocket = io('http://localhost:3000', {
+        const newSocket = io(`${socketUrl}/chatbot`, {
             auth: { token },
             autoConnect: false,
+            transports: ['websocket', 'polling'],
         });
 
         newSocket.on('connect', () => {
@@ -40,12 +54,30 @@ export const useChat = () => {
             console.log('Disconnected from Chatbot');
         });
 
-        newSocket.on('sessionStarted', (session: ChatSession) => {
+        newSocket.on('sessionStarted', (session: ChatSession & { messages?: ChatMessage[] }) => {
             console.log('Session started:', session);
+            isStartingSessionRef.current = false;
             setSessionId(session.id);
-            // Optionally load history if we were reconnecting? 
-            // For now, backend createSession returns empty or new. 
-            // If we wanted persistence across reloads, we'd need to store sessionId in localStorage.
+            
+            // Only add welcome message once (fresh session)
+            // This prevents overwriting user's optimistic message
+            if (!hasWelcomeMessageRef.current && session.messages && session.messages.length > 0) {
+                hasWelcomeMessageRef.current = true;
+                setMessages(prev => {
+                    // If user already typed something, append welcome message
+                    if (prev.length > 0) {
+                        return [...prev, ...session.messages!];
+                    }
+                    return session.messages!;
+                });
+            }
+            
+            // Send any pending message
+            if (pendingMessageRef.current) {
+                const message = pendingMessageRef.current;
+                pendingMessageRef.current = null;
+                newSocket.emit('sendMessage', { sessionId: session.id, message });
+            }
         });
 
         newSocket.on('messageReceived', (message: ChatMessage) => {
@@ -71,13 +103,15 @@ export const useChat = () => {
 
         if (newState && socket && !socket.connected) {
             socket.connect();
-            // Start session if not exists
-            if (!sessionId) {
+            // Start session if not exists and not already starting
+            if (!sessionId && !isStartingSessionRef.current) {
+                isStartingSessionRef.current = true;
                 // Try to recover from localStorage?
                 const savedSessionId = localStorage.getItem('chatSessionId');
                 if (savedSessionId) {
                     setSessionId(savedSessionId);
                     socket.emit('getHistory', { sessionId: savedSessionId });
+                    isStartingSessionRef.current = false;
                 } else {
                     socket.emit('startSession', { patientId: undefined }); // Backend handles optional patientId
                 }
@@ -93,9 +127,9 @@ export const useChat = () => {
     }, [sessionId]);
 
     const sendMessage = (text: string) => {
-        if (!socket || !sessionId) return; // Should handle no session case
+        if (!socket) return;
 
-        // Optimistic UI update
+        // Optimistic UI update - always show the message immediately
         const tempId = Date.now().toString();
         setMessages(prev => [...prev, {
             id: tempId,
@@ -105,6 +139,15 @@ export const useChat = () => {
         }]);
 
         setIsTyping(true);
+
+        // If no session yet and not already starting, store message and start session
+        if (!sessionId && !isStartingSessionRef.current) {
+            isStartingSessionRef.current = true;
+            pendingMessageRef.current = text;
+            socket.emit('startSession', { patientId: undefined });
+            return;
+        }
+
         socket.emit('sendMessage', { sessionId, message: text });
     };
 
