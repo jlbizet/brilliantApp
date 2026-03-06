@@ -1,4 +1,4 @@
-{
+﻿{
     "common": {
         "dashboard": "Dashboard",
         "patients": "Patients",
@@ -425,7 +425,8 @@
         "assistant_title": "Dental Assistant",
         "welcome_hi": "Hi there!",
         "welcome_subtitle": "I can help you check prices, book appointments, or answer questions.",
-        "input_placeholder": "Type a message..."
+        "input_placeholder": "Type a message...",
+        "typing": "Assistant is typing..."
     },
     "inventory": {
         "title": "Inventory",

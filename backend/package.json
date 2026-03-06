@@ -17,6 +17,7 @@
         "prisma:studio": "prisma studio"
     },
     "dependencies": {
+        "@kapso/whatsapp-cloud-api": "^0.1.1",
         "@nestjs/common": "^11.1.14",
         "@nestjs/config": "^3.1.1",
         "@nestjs/core": "^11.1.14",

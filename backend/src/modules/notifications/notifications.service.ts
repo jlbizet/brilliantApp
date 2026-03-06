@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationGateway } from './notification.gateway';
 import { EmailService } from './email.service';
 import { CalendarService } from './calendar.service';
+import { WhatsAppService } from '../whatsapp/whatsapp.service';
 import { ConfigService } from '@nestjs/config';
 import { NotificationType } from '@prisma/client';
 
@@ -53,17 +54,23 @@ export interface AppointmentNotificationParams {
 export class NotificationsService {
     private readonly logger = new Logger(NotificationsService.name);
     private emailEnabled = false;
+    private whatsappEnabled = false;
 
     constructor(
         private prisma: PrismaService,
         private notificationGateway: NotificationGateway,
         private emailService: EmailService,
         private calendarService: CalendarService,
+        private whatsAppService: WhatsAppService,
         private configService: ConfigService,
     ) {
         const rawEmailEnv = this.configService.get('ENABLE_EMAIL_NOTIFICATIONS');
         this.emailEnabled = rawEmailEnv === 'true' || rawEmailEnv === true;
-        this.logger.log(`Notifications initialized | Email Enabled: ${this.emailEnabled}`);
+        
+        const rawWhatsAppEnv = this.configService.get('ENABLE_WHATSAPP_NOTIFICATIONS');
+        this.whatsappEnabled = rawWhatsAppEnv === 'true' || rawWhatsAppEnv === true;
+        
+        this.logger.log(`Notifications initialized | Email: ${this.emailEnabled} | WhatsApp: ${this.whatsappEnabled}`);
     }
 
     /**
@@ -280,7 +287,7 @@ export class NotificationsService {
     }
 
     /**
-     * Send appointment reminder email and SMS
+     * Send appointment reminder via email, WhatsApp and in-app notification
      */
     async sendAppointmentReminder(
         patientId: string,
@@ -291,6 +298,12 @@ export class NotificationsService {
         appointmentTime: Date,
     ) {
         const timeStr = this.formatTime(appointmentTime);
+        const dateStr = appointmentTime.toLocaleDateString('es-UY', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        });
 
         // Send Email reminder
         if (this.emailEnabled && patientEmail) {
@@ -304,6 +317,29 @@ export class NotificationsService {
             this.logger.log(`Appointment reminder email sent to ${patientEmail}`);
         }
 
+        // Send WhatsApp reminder
+        if (this.whatsappEnabled && patientPhone) {
+            try {
+                const patient = await this.prisma.patient.findUnique({
+                    where: { id: patientId },
+                    select: { whatsappOptIn: true, whatsappNotificationsEnabled: true },
+                });
+
+                if (patient?.whatsappOptIn && patient?.whatsappNotificationsEnabled) {
+                    await this.whatsAppService.sendAppointmentReminder(
+                        patientPhone,
+                        patientName,
+                        dateStr,
+                        timeStr,
+                        dentistName,
+                    );
+                    this.logger.log(`Appointment reminder WhatsApp sent to ${patientPhone}`);
+                }
+            } catch (error) {
+                this.logger.error(`Failed to send WhatsApp reminder: ${error.message}`);
+            }
+        }
+
         // Create in-app notification
         await this.create({
             recipientPatientId: patientId,
@@ -312,6 +348,40 @@ export class NotificationsService {
             type: NotificationType.APPOINTMENT_REMINDER,
             sendRealtime: false,
         });
+    }
+
+    /**
+     * Send same-day appointment reminder via WhatsApp
+     */
+    async sendSameDayReminder(
+        patientId: string,
+        patientPhone: string | null,
+        patientName: string,
+        dentistName: string,
+        appointmentTime: Date,
+    ) {
+        if (!this.whatsappEnabled || !patientPhone) return;
+
+        const timeStr = this.formatTime(appointmentTime);
+
+        try {
+            const patient = await this.prisma.patient.findUnique({
+                where: { id: patientId },
+                select: { whatsappOptIn: true, whatsappNotificationsEnabled: true },
+            });
+
+            if (patient?.whatsappOptIn && patient?.whatsappNotificationsEnabled) {
+                await this.whatsAppService.sendSameDayReminder(
+                    patientPhone,
+                    patientName,
+                    timeStr,
+                    dentistName,
+                );
+                this.logger.log(`Same-day WhatsApp reminder sent to ${patientPhone}`);
+            }
+        } catch (error) {
+            this.logger.error(`Failed to send same-day WhatsApp reminder: ${error.message}`);
+        }
     }
 
     /**

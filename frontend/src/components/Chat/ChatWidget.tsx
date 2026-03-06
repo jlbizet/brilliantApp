@@ -20,7 +20,7 @@ export default function ChatWidget() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!inputValue.trim()) return;
+        if (!inputValue.trim() || isTyping) return;
         sendMessage(inputValue);
         setInputValue('');
     };
@@ -71,12 +71,13 @@ export default function ChatWidget() {
                                 type="text"
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
-                                placeholder={t('chat.input_placeholder')}
-                                className="w-full pl-4 pr-12 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 transparent-border"
+                                placeholder={isTyping ? t('chat.typing') : t('chat.input_placeholder')}
+                                disabled={isTyping}
+                                className="w-full pl-4 pr-12 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 transparent-border disabled:opacity-60 disabled:cursor-not-allowed transition-opacity"
                             />
                             <button
                                 type="submit"
-                                disabled={!inputValue.trim()}
+                                disabled={!inputValue.trim() || isTyping}
                                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
                                 <Send className="w-4 h-4" />

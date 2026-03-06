@@ -136,24 +136,29 @@ model Patient {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Notification Preferences
-  emailNotificationsEnabled Boolean @default(true)
-  smsNotificationsEnabled Boolean @default(true)
-  appointmentRemindersEnabled Boolean @default(true)
-  paymentRemindersEnabled Boolean @default(true)
-  marketingEmailsEnabled Boolean @default(false)
+    // Notification Preferences
+    emailNotificationsEnabled Boolean @default(true)
+    smsNotificationsEnabled Boolean @default(true)
+    whatsappNotificationsEnabled Boolean @default(true)
+    appointmentRemindersEnabled Boolean @default(true)
+    paymentRemindersEnabled Boolean @default(true)
+    marketingEmailsEnabled Boolean @default(false)
 
-  medicalHistory MedicalHistory[]
-  allergies Allergy[]
-  appointments Appointment[]
-  treatmentPlans TreatmentPlan[]
-  invoices Invoice[]
-  documents Document[]
-  prescriptions Prescription[]
-  waitlistEntries WaitlistEntry[]
-  chatSessions ChatSession[]
-  odontogram Odontogram?
-  notifications Notification[]
+    // WhatsApp
+    whatsappOptIn Boolean @default(false)
+
+    medicalHistory MedicalHistory[]
+    allergies Allergy[]
+    appointments Appointment[]
+    treatmentPlans TreatmentPlan[]
+    invoices Invoice[]
+    documents Document[]
+    prescriptions Prescription[]
+    waitlistEntries WaitlistEntry[]
+    chatSessions ChatSession[]
+    odontogram Odontogram?
+    notifications Notification[]
+    whatsappMessages WhatsAppMessage[]
 
   @@index([lastName, firstName])
   @@index([phone])
@@ -460,18 +465,46 @@ model ChatSession {
 }
 
 model ChatMessage {
-  id            String      @id @default(uuid())
-  sessionId     String
-  session       ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  sender        String      // USER, BOT
-  message       String
-  intent        String?     // BOOKING, PRICING, GENERAL
-  createdAt     DateTime    @default(now())
+    id String @id @default(uuid())
+    sessionId String
+    session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+    sender String // USER, BOT
+    message String
+    intent String? // BOOKING, PRICING, GENERAL
+    createdAt DateTime @default(now())
 
-  @@index([sessionId])
-  @@map("chat_messages")
+    @@index([sessionId])
+    @@map("chat_messages")
 }
 
+// ============================================
+// WHATSAPP
+// ============================================
+
+model WhatsAppMessage {
+    id String @id @default(uuid())
+    patientId String?
+    whatsappMessageId String? @unique
+    phoneNumber String
+    direction String // INBOUND / OUTBOUND
+    type String // TEXT / TEMPLATE
+    content String?
+    templateName String?
+    status String // SENT / DELIVERED / READ / FAILED / RECEIVED
+    errorMessage String?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    patient Patient? @relation(fields: [patientId], references: [id])
+
+    @@index([patientId])
+    @@index([phoneNumber])
+    @@index([whatsappMessageId])
+    @@map("whatsapp_messages")
+}
+
+// ============================================
+// ODONTOGRAMA
 // ============================================
 // ODONTOGRAMA
 // ============================================

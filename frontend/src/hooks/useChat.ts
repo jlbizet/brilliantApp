@@ -15,13 +15,13 @@ interface ChatSession {
 }
 
 const getSocketUrl = () => {
-    // In production (Docker), use the window location
-    // In development, use localhost with the right port
-    const isProduction = import.meta.env.PROD;
-    if (isProduction) {
+    // In production (Docker), use the window location origin (nginx proxies to backend)
+    // In development, connect directly to the NestJS backend
+    if (import.meta.env.PROD) {
         return window.location.origin;
     }
-    return 'http://localhost:5173';
+    // VITE_API_URL allows overriding in .env.local; default to the NestJS dev port
+    return import.meta.env.VITE_API_URL || 'http://localhost:3000';
 };
 
 export const useChat = () => {
@@ -38,7 +38,7 @@ export const useChat = () => {
     useEffect(() => {
         const socketUrl = getSocketUrl();
         console.log('Connecting to socket at:', socketUrl);
-        
+
         const token = localStorage.getItem('accessToken');
         const newSocket = io(`${socketUrl}/chatbot`, {
             auth: { token },
@@ -52,13 +52,32 @@ export const useChat = () => {
 
         newSocket.on('disconnect', () => {
             console.log('Disconnected from Chatbot');
+            // Clear typing indicator so the spinner is never left spinning
+            setIsTyping(false);
+        });
+
+        newSocket.on('connect_error', (err) => {
+            console.error('Chatbot connection error:', err.message);
+            setIsTyping(false);
+        });
+
+        newSocket.on('chatError', (payload: { message: string }) => {
+            // Gateway emitted an application-level error after a failed processMessage
+            setIsTyping(false);
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                sender: 'BOT',
+                message: payload.message,
+                intent: 'ERROR',
+                createdAt: new Date().toISOString(),
+            }]);
         });
 
         newSocket.on('sessionStarted', (session: ChatSession & { messages?: ChatMessage[] }) => {
             console.log('Session started:', session);
             isStartingSessionRef.current = false;
             setSessionId(session.id);
-            
+
             // Only add welcome message once (fresh session)
             // This prevents overwriting user's optimistic message
             if (!hasWelcomeMessageRef.current && session.messages && session.messages.length > 0) {
@@ -71,7 +90,7 @@ export const useChat = () => {
                     return session.messages!;
                 });
             }
-            
+
             // Send any pending message
             if (pendingMessageRef.current) {
                 const message = pendingMessageRef.current;

@@ -1,4 +1,4 @@
-{
+﻿{
   "common": {
     "dashboard": "Tablero",
     "patients": "Pacientes",
@@ -84,7 +84,8 @@
         "assistant_title": "Asistente Dental",
         "welcome_hi": "¡Hola!",
         "welcome_subtitle": "Puedo ayudarle a consultar precios, agendar citas o responder preguntas.",
-        "input_placeholder": "Escriba un mensaje..."
+        "input_placeholder": "Escriba un mensaje...",
+        "typing": "El asistente está escribiendo..."
     },
     "patients": {
         "title": "Pacientes",

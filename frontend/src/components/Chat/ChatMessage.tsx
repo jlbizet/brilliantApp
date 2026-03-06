@@ -22,7 +22,14 @@ export default function ChatMessage({ message }: ChatMessageProps) {
                 "p-3 rounded-2xl max-w-[80%] text-sm",
                 isBot ? "bg-gray-100 text-gray-800 rounded-tl-none" : "bg-primary-600 text-white rounded-tr-none shadow-md shadow-primary-500/20"
             )}>
-                <p>{message.message}</p>
+                <p>
+                    {message.message.split('\n').map((line, i, arr) => (
+                        <React.Fragment key={i}>
+                            {line}
+                            {i < arr.length - 1 && <br />}
+                        </React.Fragment>
+                    ))}
+                </p>
                 <span className="text-[10px] opacity-70 block mt-1 text-right">
                     {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>

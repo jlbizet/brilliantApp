@@ -29,9 +29,10 @@ export class ChatbotController {
     @ApiOperation({ summary: 'Check AI agent status' })
     @ApiResponse({ status: 200, description: 'AI agent status' })
     async getStatus() {
-        const hasApiKey = process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== '';
-        const model = process.env.AI_MODEL || 'llama-3.3-70b-versatile';
-        const language = process.env.APP_LANGUAGE || 'en';
+        const apiKey = process.env.GEMINI_API_KEY || '';
+        const hasApiKey = !!apiKey && apiKey !== 'your_gemini_api_key_here';
+        const model = process.env.AI_MODEL || 'gemini-2.0-flash-exp';
+        const language = process.env.APP_LANGUAGE || 'es';
 
         return {
             status: hasApiKey ? 'active' : 'inactive',
