@@ -138,35 +138,37 @@ export class AppointmentsService {
 
         try {
             const appointment = await this.prisma.appointment.create({
-            data: {
-                patientId: dto.patientId,
-                dentistId: dto.dentistId,
-                title: dto.title,
-                description: dto.description,
-                startTime: new Date(dto.startTime),
-                endTime: new Date(dto.endTime),
-                type: dto.type,
-                notes: dto.notes,
-            },
-            include: {
-                patient: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
-                dentist: { select: { id: true, firstName: true, lastName: true } },
-            },
-        });
-
-        // Notify BOTH dentist AND patient - this will also create the calendar event
-        const calendarEventId = await this.notifyAppointmentCreated(appointment);
-
-        // If calendar event was created, store the event ID
-        if (calendarEventId) {
-            await this.prisma.appointment.update({
-                where: { id: appointment.id },
-                data: { googleCalendarEventId: calendarEventId },
+                data: {
+                    patientId: dto.patientId,
+                    dentistId: dto.dentistId,
+                    title: dto.title,
+                    description: dto.description,
+                    startTime: new Date(dto.startTime),
+                    endTime: new Date(dto.endTime),
+                    type: dto.type,
+                    notes: dto.notes,
+                },
+                include: {
+                    patient: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+                    dentist: { select: { id: true, firstName: true, lastName: true } },
+                },
             });
-            this.logger.log(`[CREATE] Stored Google Calendar event ID: ${calendarEventId} for appointment ${appointment.id}`);
-        }
 
-        return appointment;
+            // Notify BOTH dentist AND patient - this will also create the calendar event
+            // Fire asynchronously to prevent API blocking
+            this.notifyAppointmentCreated(appointment).then(calendarEventId => {
+                // If calendar event was created, store the event ID
+                if (calendarEventId) {
+                    this.prisma.appointment.update({
+                        where: { id: appointment.id },
+                        data: { googleCalendarEventId: calendarEventId },
+                    }).then(() => {
+                        this.logger.log(`[CREATE] Stored Google Calendar event ID: ${calendarEventId} for appointment ${appointment.id}`);
+                    }).catch(err => this.logger.error(`[CREATE] Failed to update calendar ID: ${err.message}`));
+                }
+            }).catch(err => this.logger.error(`[CREATE] Failed to notify appointment creation: ${err.message}`));
+
+            return appointment;
         } catch (error) {
             throw new BadRequestException('Could not create appointment: ' + error.message);
         }
@@ -274,7 +276,11 @@ export class AppointmentsService {
             orderBy: { startTime: 'asc' },
         });
         console.log(`[Recurring] First appointment in series: ${firstApt?.id}, patient: ${firstApt?.patient?.email}`);
-        if (firstApt) await this.notifyAppointmentCreated(firstApt);
+        if (firstApt) {
+            this.notifyAppointmentCreated(firstApt).catch(err => {
+                this.logger.error(`[Recurring] Failed to notify first appointment: ${err.message}`);
+            });
+        }
 
         return { message: `${appointments.length} recurring appointments created`, groupId };
     }
@@ -331,16 +337,18 @@ export class AppointmentsService {
         const statusChanged = oldStatus !== appointment.status;
 
         // Notify BOTH dentist AND patient if status changed or rescheduled
-        const newCalendarEventId = await this.notifyAppointmentUpdated(appointment, oldAppointment, oldAppointment.googleCalendarEventId);
-
-        // If calendar event was created/updated, update the database
-        if (newCalendarEventId !== undefined && newCalendarEventId !== oldAppointment.googleCalendarEventId) {
-            await this.prisma.appointment.update({
-                where: { id: appointment.id },
-                data: { googleCalendarEventId: newCalendarEventId },
-            });
-            this.logger.log(`[UPDATE] Updated Google Calendar event ID: ${newCalendarEventId} for appointment ${appointment.id}`);
-        }
+        // We do this asynchronously so the API returns quickly without waiting for the email/calendar API
+        this.notifyAppointmentUpdated(appointment, oldAppointment, oldAppointment.googleCalendarEventId).then(newCalendarEventId => {
+            // If calendar event was created/updated, update the database
+            if (newCalendarEventId !== undefined && newCalendarEventId !== oldAppointment.googleCalendarEventId) {
+                this.prisma.appointment.update({
+                    where: { id: appointment.id },
+                    data: { googleCalendarEventId: newCalendarEventId },
+                }).then(() => {
+                    this.logger.log(`[UPDATE] Updated Google Calendar event ID: ${newCalendarEventId} for appointment ${appointment.id}`);
+                }).catch(err => this.logger.error(`[UPDATE] Failed to update calendar ID: ${err.message}`));
+            }
+        }).catch(err => this.logger.error(`[UPDATE] Failed to notify appointment update: ${err.message}`));
 
         return appointment;
     }
@@ -349,7 +357,10 @@ export class AppointmentsService {
         const appointment = await this.findOne(id);
 
         // Notify about cancellation - this will also delete the calendar event if it exists
-        await this.notifyAppointmentCancelled(appointment);
+        // Fire asynchronously
+        this.notifyAppointmentCancelled(appointment).catch(err => {
+            this.logger.error(`[REMOVE] Failed to notify appointment cancellation: ${err.message}`);
+        });
 
         return this.prisma.appointment.delete({ where: { id } });
     }
@@ -408,7 +419,7 @@ export class AppointmentsService {
     @Cron(CronExpression.EVERY_DAY_AT_9AM, { timeZone: 'America/Montevideo' })
     async handleReminders() {
         this.logger.log('[Reminders] Starting daily reminder check...');
-        
+
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         tomorrow.setHours(0, 0, 0, 0);
@@ -434,7 +445,7 @@ export class AppointmentsService {
     @Cron(CronExpression.EVERY_HOUR, { timeZone: 'America/Montevideo' })
     async handleSameDayReminders() {
         this.logger.log('[SameDayReminders] Starting hourly reminder check...');
-        
+
         const now = new Date();
         const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
         const twoHoursAndFiveMinutesLater = new Date(now.getTime() + (2 * 60 + 5) * 60 * 1000);
@@ -528,20 +539,20 @@ export class AppointmentsService {
         const statusChanged = oldData.status !== appointment.status;
 
         if (dateChanged) {
-            dentistMessage = isSpanish 
+            dentistMessage = isSpanish
                 ? `Cita con ${appointment.patient?.firstName} ${appointment.patient?.lastName} reprogramada para el ${dateStr} a las ${timeStr}`
                 : `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} rescheduled to ${dateStr} at ${timeStr}`;
-            patientMessage = isSpanish 
+            patientMessage = isSpanish
                 ? `Tu cita ha sido reprogramada para el ${dateStr} a las ${timeStr}`
                 : `Your appointment has been rescheduled to ${dateStr} at ${timeStr}`;
             dentistTitle = isSpanish ? 'Cita Reprogramada' : 'Appointment Rescheduled';
             patientTitle = isSpanish ? 'Cita Reprogramada' : 'Appointment Rescheduled';
             context = 'reschedule';
         } else if (statusChanged) {
-            dentistMessage = isSpanish 
+            dentistMessage = isSpanish
                 ? `Cita con ${appointment.patient?.firstName} ${appointment.patient?.lastName} cambiada a ${appointment.status}`
                 : `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} status changed to ${appointment.status}`;
-            patientMessage = isSpanish 
+            patientMessage = isSpanish
                 ? `El estado de tu cita ha sido actualizado a ${appointment.status}`
                 : `Your appointment status has been updated to ${appointment.status}`;
             if (appointment.status === 'CANCELLED') {
@@ -553,10 +564,10 @@ export class AppointmentsService {
                 context = 'status';
             }
         } else {
-            dentistMessage = isSpanish 
+            dentistMessage = isSpanish
                 ? `Cita con ${appointment.patient?.firstName} ${appointment.patient?.lastName} ha sido actualizada`
                 : `Appointment with ${appointment.patient?.firstName} ${appointment.patient?.lastName} has been updated`;
-            patientMessage = isSpanish 
+            patientMessage = isSpanish
                 ? 'Los detalles de tu cita han sido actualizados'
                 : 'Your appointment details have been updated';
             context = 'update';

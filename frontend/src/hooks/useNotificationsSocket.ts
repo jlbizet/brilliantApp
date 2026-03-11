@@ -47,22 +47,29 @@ export function useNotificationsSocket() {
   }, [initAudioContext]);
 
   const connect = useCallback(() => {
-        const token = localStorage.getItem('accessToken');
-        if (!token) return;
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
 
-        const socket = io('/notifications', {
-            auth: { token },
-            transports: ['websocket'],
-            autoConnect: true,
-        });
+    // Extract base URL from VITE_API_URL (remove /api/v1 if present)
+    let socketUrl = '';
+    const envUrl = import.meta.env.VITE_API_URL;
+    if (envUrl) {
+      socketUrl = envUrl.replace(/\/api\/v1\/?$/, '');
+    }
 
-        socket.on('connect', () => {
-            console.log('[WebSocket] Connected to notifications');
-        });
+    const socket = io(`${socketUrl}/notifications`, {
+      auth: { token },
+      transports: ['websocket'],
+      autoConnect: true,
+    });
 
-        socket.on('disconnect', () => {
-            console.log('[WebSocket] Disconnected from notifications');
-        });
+    socket.on('connect', () => {
+      console.log('[WebSocket] Connected to notifications');
+    });
+
+    socket.on('disconnect', () => {
+      console.log('[WebSocket] Disconnected from notifications');
+    });
 
     socket.on('notification', (notification: any) => {
       console.log('[WebSocket] New notification received:', notification);
@@ -83,43 +90,43 @@ export function useNotificationsSocket() {
       }
     });
 
-        socket.on('error', (error: any) => {
-            console.error('[WebSocket] Error:', error);
-        });
+    socket.on('error', (error: any) => {
+      console.error('[WebSocket] Error:', error);
+    });
 
     socketRef.current = socket;
   }, [queryClient, playNotificationSound]);
 
-    const disconnect = useCallback(() => {
-        if (socketRef.current) {
-            socketRef.current.disconnect();
-            socketRef.current = null;
-        }
-    }, []);
+  const disconnect = useCallback(() => {
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+  }, []);
 
-    const acknowledgeNotification = useCallback((notificationId: string) => {
-        if (socketRef.current) {
-            socketRef.current.emit('acknowledge', { notificationId });
-        }
-    }, []);
+  const acknowledgeNotification = useCallback((notificationId: string) => {
+    if (socketRef.current) {
+      socketRef.current.emit('acknowledge', { notificationId });
+    }
+  }, []);
 
-    const markAsRead = useCallback((notificationId: string) => {
-        if (socketRef.current) {
-            socketRef.current.emit('mark-read', { notificationId });
-        }
-    }, []);
+  const markAsRead = useCallback((notificationId: string) => {
+    if (socketRef.current) {
+      socketRef.current.emit('mark-read', { notificationId });
+    }
+  }, []);
 
-    useEffect(() => {
-        if (isAuthenticated) {
-            connect();
-        } else {
-            disconnect();
-        }
+  useEffect(() => {
+    if (isAuthenticated) {
+      connect();
+    } else {
+      disconnect();
+    }
 
-        return () => {
-            disconnect();
-        };
-    }, [isAuthenticated, connect, disconnect]);
+    return () => {
+      disconnect();
+    };
+  }, [isAuthenticated, connect, disconnect]);
 
   // Request browser notification permission on mount
   useEffect(() => {
@@ -144,9 +151,9 @@ export function useNotificationsSocket() {
   }, [initAudioContext]);
 
   return {
-        socket: socketRef.current,
-        acknowledgeNotification,
-        markAsRead,
-        isConnected: !!socketRef.current?.connected,
-    };
+    socket: socketRef.current,
+    acknowledgeNotification,
+    markAsRead,
+    isConnected: !!socketRef.current?.connected,
+  };
 }

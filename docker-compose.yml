@@ -73,6 +73,8 @@ services:
       CLINIC_TIMEZONE: ${CLINIC_TIMEZONE:-America/Montevideo}
       TZ: ${CLINIC_TIMEZONE:-America/Montevideo}
       APP_LANGUAGE: ${APP_LANGUAGE:-en}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      AI_MODEL: ${AI_MODEL:-gemini-2.0-flash-exp}
       AI_MAX_TOKENS: ${AI_MAX_TOKENS:-1024}
       AI_TEMPERATURE: ${AI_TEMPERATURE:-0.7}
     depends_on:

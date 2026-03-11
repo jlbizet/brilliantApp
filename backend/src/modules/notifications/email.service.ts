@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import * as dns from 'dns';
 
 export interface EmailTemplateData {
     [key: string]: string | number | boolean;
@@ -139,9 +140,9 @@ export class EmailService {
         this.timezone = this.configService.get<string>('CLINIC_TIMEZONE') || process.env.CLINIC_TIMEZONE || 'UTC';
         const appLang = process.env.APP_LANGUAGE;
         this.defaultLanguage = appLang === 'en' ? 'en' : 'es';
-        
+
         this.logger.log(`Email service initialized with language: ${this.defaultLanguage}, timezone: ${this.timezone}`);
-        
+
         const smtpHost = this.configService.get<string>('SMTP_HOST') || 'smtp.gmail.com';
         const smtpPort = this.configService.get<number>('SMTP_PORT') || 587;
         const smtpUser = this.configService.get<string>('SMTP_USER');
@@ -156,9 +157,31 @@ export class EmailService {
                     user: smtpUser,
                     pass: smtpPass,
                 },
+                tls: {
+                    // Do not fail on invalid certs or when behind proxies
+                    rejectUnauthorized: false
+                },
+                // Add timeouts so it doesn't hang forever
+                connectionTimeout: 10000,
+                greetingTimeout: 5000,
+                socketTimeout: 20000,
+                // Force IPv4 using a custom lookup function as a fail-safe
+                lookup: (hostname: string, options: any, callback: (err: any, address: string | any, family: number) => void) => {
+                    dns.lookup(hostname, { family: 4 }, callback);
+                }
+            } as any);
+
+            // Verify the connection configuration
+            this.transporter.verify((error, success) => {
+                if (error) {
+                    this.logger.error(`SMTP Connection Error [${smtpHost}:${smtpPort}]:`, error);
+                } else {
+                    this.logger.log('SMTP Server is ready to take our messages');
+                }
             });
+
             this.isConfigured = true;
-            this.logger.log('Nodemailer SMTP email service configured');
+            this.logger.log(`Nodemailer SMTP email service configured on ${smtpHost}:${smtpPort}`);
         } else {
             this.logger.warn('SMTP credentials not configured. Email notifications will be disabled.');
         }
@@ -280,7 +303,7 @@ export class EmailService {
         const lang = params.language || this.defaultLanguage;
         const html = this.getAppointmentUpdateTemplate(params);
 
-        const subject = lang === 'es' 
+        const subject = lang === 'es'
             ? `Cita Actualizada - ${params.clinicName || 'Brilliant Dental'}`
             : `Appointment Update - ${params.clinicName || 'Brilliant Dental'}`;
 
@@ -364,14 +387,14 @@ export class EmailService {
     }): string {
         const lang = (params.language || this.defaultLanguage) as Language;
         const t = TRANSLATIONS[lang].appointmentReminder;
-        
+
         const dateStr = this.formatDate(params.appointmentDate);
         const clinicName = params.clinicName || 'Brilliant Dental';
         const clinicPhone = params.clinicPhone || '+598 9000 0000';
         const clinicAddress = params.clinicAddress || 'Av. 18 de Julio, Montevideo, Uruguay';
 
         const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(clinicAddress)}`;
-        const whatsappText = lang === 'es' 
+        const whatsappText = lang === 'es'
             ? `Hola, quiero confirmar mi cita para el ${dateStr} a las ${params.appointmentTime}`
             : `Hello, I want to confirm my appointment for ${dateStr} at ${params.appointmentTime}`;
         const whatsappUrl = `https://wa.me/${clinicPhone.replace(/\s+/g, '')}?text=${encodeURIComponent(whatsappText)}`;
@@ -455,7 +478,7 @@ export class EmailService {
     }): string {
         const lang = (params.language || this.defaultLanguage) as Language;
         const t = TRANSLATIONS[lang].appointmentConfirmation;
-        
+
         const dateStr = this.formatDate(params.appointmentDate);
         const clinicName = params.clinicName || 'Brilliant Dental';
 
@@ -513,7 +536,7 @@ export class EmailService {
     }): string {
         const lang = (params.language || this.defaultLanguage) as Language;
         const t = TRANSLATIONS[lang].appointmentUpdate;
-        
+
         const dateStr = this.formatDate(params.appointmentDate);
         const clinicName = params.clinicName || 'Brilliant Dental';
 

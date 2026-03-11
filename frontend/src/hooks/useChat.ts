@@ -15,13 +15,13 @@ interface ChatSession {
 }
 
 const getSocketUrl = () => {
-    // In production (Docker), use the window location origin (nginx proxies to backend)
-    // In development, connect directly to the NestJS backend
-    if (import.meta.env.PROD) {
-        return window.location.origin;
+    // We must parse VITE_API_URL to get the backend domain without /api/v1
+    const envUrl = import.meta.env.VITE_API_URL;
+    if (envUrl) {
+        return envUrl.replace(/\/api\/v1\/?$/, '');
     }
-    // VITE_API_URL allows overriding in .env.local; default to the NestJS dev port
-    return import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    // Fallback to dev port if not found
+    return 'http://localhost:3000';
 };
 
 export const useChat = () => {

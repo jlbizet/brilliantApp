@@ -1,7 +1,23 @@
 import axios from 'axios';
 
+const getBaseUrl = () => {
+    const envUrl = import.meta.env.VITE_API_URL;
+
+    // In production, if VITE_API_URL is missing, log a loud error
+    if (import.meta.env.PROD && !envUrl) {
+        console.error('🚨 CRITICAL ERROR: VITE_API_URL environment variable is missing! The frontend cannot connect to the backend.');
+        // We still return /api/v1 so it doesn't crash immediately, but the requests will fail.
+        return '/api/v1';
+    }
+
+    if (!envUrl) return '/api/v1';
+    return envUrl.endsWith('/api/v1') ? envUrl : `${envUrl.replace(/\/$/, '')}/api/v1`;
+};
+
+const baseURL = getBaseUrl();
+
 const api = axios.create({
-    baseURL: '/api/v1',
+    baseURL,
     headers: { 'Content-Type': 'application/json' },
 });
 
@@ -27,7 +43,7 @@ api.interceptors.response.use(
                 const refreshToken = localStorage.getItem('refreshToken');
                 if (!refreshToken) throw new Error('No refresh token');
 
-                const response = await axios.post('/api/v1/auth/refresh', { refreshToken }, {
+                const response = await axios.post(`${baseURL}/auth/refresh`, { refreshToken }, {
                     headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` },
                 });
 

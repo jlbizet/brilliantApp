@@ -141,90 +141,104 @@ async function main() {
     }
 
     // Create treatment plans
-    const plan1 = await prisma.treatmentPlan.create({
-        data: {
-            patientId: patients[0].id,
-            name: 'Full Mouth Restoration',
-            description: 'Comprehensive restoration plan including crowns and fillings',
-            estimatedCost: 4500,
-            status: 'IN_PROGRESS',
-            treatments: {
-                create: [
-                    { name: 'Crown - Tooth #14', tooth: '#14', cost: 1200, status: 'COMPLETED', performedAt: new Date() },
-                    { name: 'Composite Filling - Tooth #19', tooth: '#19', cost: 350, status: 'COMPLETED', performedAt: new Date() },
-                    { name: 'Crown - Tooth #30', tooth: '#30', cost: 1200, status: 'PLANNED' },
-                    { name: 'Veneer - Tooth #8', tooth: '#8', cost: 1750, status: 'PLANNED' },
-                ],
+    // Using upsert by name + patientId (assuming we don't have a unique constraint on these, we just delete or check first)
+    // Actually, treatment plans don't have a unique identifier other than ID, so we'll just check if one exists first
+    const existingPlan1 = await prisma.treatmentPlan.findFirst({ where: { patientId: patients[0].id, name: 'Full Mouth Restoration' } });
+    if (!existingPlan1) {
+        await prisma.treatmentPlan.create({
+            data: {
+                patientId: patients[0].id,
+                name: 'Full Mouth Restoration',
+                description: 'Comprehensive restoration plan including crowns and fillings',
+                estimatedCost: 4500,
+                status: 'IN_PROGRESS',
+                treatments: {
+                    create: [
+                        { name: 'Crown - Tooth #14', tooth: '#14', cost: 1200, status: 'COMPLETED', performedAt: new Date() },
+                        { name: 'Composite Filling - Tooth #19', tooth: '#19', cost: 350, status: 'COMPLETED', performedAt: new Date() },
+                        { name: 'Crown - Tooth #30', tooth: '#30', cost: 1200, status: 'PLANNED' },
+                        { name: 'Veneer - Tooth #8', tooth: '#8', cost: 1750, status: 'PLANNED' },
+                    ],
+                },
             },
-        },
-    });
+        });
+    }
 
-    const plan2 = await prisma.treatmentPlan.create({
-        data: {
-            patientId: patients[1].id,
-            name: 'Orthodontic Treatment',
-            description: 'Clear aligner therapy for mild crowding',
-            estimatedCost: 3800,
-            status: 'IN_PROGRESS',
-            treatments: {
-                create: [
-                    { name: 'Initial Assessment & Impressions', cost: 200, status: 'COMPLETED', performedAt: new Date() },
-                    { name: 'Aligner Set 1-5', cost: 1200, status: 'IN_PROGRESS' },
-                    { name: 'Aligner Set 6-10', cost: 1200, status: 'PLANNED' },
-                    { name: 'Retainer Fitting', cost: 400, status: 'PLANNED' },
-                ],
+    const existingPlan2 = await prisma.treatmentPlan.findFirst({ where: { patientId: patients[1].id, name: 'Orthodontic Treatment' } });
+    if (!existingPlan2) {
+        await prisma.treatmentPlan.create({
+            data: {
+                patientId: patients[1].id,
+                name: 'Orthodontic Treatment',
+                description: 'Clear aligner therapy for mild crowding',
+                estimatedCost: 3800,
+                status: 'IN_PROGRESS',
+                treatments: {
+                    create: [
+                        { name: 'Initial Assessment & Impressions', cost: 200, status: 'COMPLETED', performedAt: new Date() },
+                        { name: 'Aligner Set 1-5', cost: 1200, status: 'IN_PROGRESS' },
+                        { name: 'Aligner Set 6-10', cost: 1200, status: 'PLANNED' },
+                        { name: 'Retainer Fitting', cost: 400, status: 'PLANNED' },
+                    ],
+                },
             },
-        },
-    });
+        });
+    }
 
     // Create invoices and payments
-    const inv1 = await prisma.invoice.create({
-        data: {
-            patientId: patients[0].id,
-            invoiceNumber: 'INV-2024-001',
-            subtotal: 1550,
-            tax: 0,
-            discount: 50,
-            total: 1500,
-            status: 'PAID',
-            dueDate: new Date(),
-            items: {
-                create: [
-                    { description: 'Crown - Tooth #14', quantity: 1, unitPrice: 1200, total: 1200 },
-                    { description: 'Composite Filling - Tooth #19', quantity: 1, unitPrice: 350, total: 350 },
-                ],
+    const existingInv1 = await prisma.invoice.findUnique({ where: { invoiceNumber: 'INV-2024-001' } });
+    if (!existingInv1) {
+        await prisma.invoice.create({
+            data: {
+                patientId: patients[0].id,
+                invoiceNumber: 'INV-2024-001',
+                subtotal: 1550,
+                tax: 0,
+                discount: 50,
+                total: 1500,
+                status: 'PAID',
+                dueDate: new Date(),
+                items: {
+                    create: [
+                        { description: 'Crown - Tooth #14', quantity: 1, unitPrice: 1200, total: 1200 },
+                        { description: 'Composite Filling - Tooth #19', quantity: 1, unitPrice: 350, total: 350 },
+                    ],
+                },
+                payments: {
+                    create: [
+                        { amount: 1500, method: 'CREDIT_CARD', reference: 'CC-4521' },
+                    ],
+                },
             },
-            payments: {
-                create: [
-                    { amount: 1500, method: 'CREDIT_CARD', reference: 'CC-4521' },
-                ],
-            },
-        },
-    });
+        });
+    }
 
-    const inv2 = await prisma.invoice.create({
-        data: {
-            patientId: patients[1].id,
-            invoiceNumber: 'INV-2024-002',
-            subtotal: 1400,
-            tax: 0,
-            discount: 0,
-            total: 1400,
-            status: 'PARTIAL',
-            dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            items: {
-                create: [
-                    { description: 'Initial Assessment & Impressions', quantity: 1, unitPrice: 200, total: 200 },
-                    { description: 'Aligner Set 1-5', quantity: 1, unitPrice: 1200, total: 1200 },
-                ],
+    const existingInv2 = await prisma.invoice.findUnique({ where: { invoiceNumber: 'INV-2024-002' } });
+    if (!existingInv2) {
+        await prisma.invoice.create({
+            data: {
+                patientId: patients[1].id,
+                invoiceNumber: 'INV-2024-002',
+                subtotal: 1400,
+                tax: 0,
+                discount: 0,
+                total: 1400,
+                status: 'PARTIAL',
+                dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                items: {
+                    create: [
+                        { description: 'Initial Assessment & Impressions', quantity: 1, unitPrice: 200, total: 200 },
+                        { description: 'Aligner Set 1-5', quantity: 1, unitPrice: 1200, total: 1200 },
+                    ],
+                },
+                payments: {
+                    create: [
+                        { amount: 700, method: 'INSURANCE', reference: 'INS-BC-2024' },
+                    ],
+                },
             },
-            payments: {
-                create: [
-                    { amount: 700, method: 'INSURANCE', reference: 'INS-BC-2024' },
-                ],
-            },
-        },
-    });
+        });
+    }
 
     // Create inventory items
     await prisma.inventoryItem.createMany({
