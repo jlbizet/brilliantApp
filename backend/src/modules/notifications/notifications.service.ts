@@ -55,6 +55,7 @@ export class NotificationsService {
     private readonly logger = new Logger(NotificationsService.name);
     private emailEnabled = false;
     private whatsappEnabled = false;
+    private readonly timezone: string;
 
     constructor(
         private prisma: PrismaService,
@@ -70,14 +71,17 @@ export class NotificationsService {
         const rawWhatsAppEnv = this.configService.get('ENABLE_WHATSAPP_NOTIFICATIONS');
         this.whatsappEnabled = rawWhatsAppEnv === 'true' || rawWhatsAppEnv === true;
         
-        this.logger.log(`Notifications initialized | Email: ${this.emailEnabled} | WhatsApp: ${this.whatsappEnabled}`);
+        this.timezone = this.configService.get<string>('CLINIC_TIMEZONE') || process.env.CLINIC_TIMEZONE || 'America/Montevideo';
+        
+        this.logger.log(`Notifications initialized | Email: ${this.emailEnabled} | WhatsApp: ${this.whatsappEnabled} | Timezone: ${this.timezone}`);
     }
 
     /**
-     * Format time for display (uses server local timezone)
+     * Format time for display (uses configured clinic timezone)
      */
     private formatTime(date: Date): string {
         return date.toLocaleTimeString('en-US', {
+            timeZone: this.timezone,
             hour: '2-digit',
             minute: '2-digit',
             hour12: true,
@@ -299,6 +303,7 @@ export class NotificationsService {
     ) {
         const timeStr = this.formatTime(appointmentTime);
         const dateStr = appointmentTime.toLocaleDateString('es-UY', {
+            timeZone: this.timezone,
             weekday: 'long',
             year: 'numeric',
             month: 'long',

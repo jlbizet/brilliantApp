@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
-import * as dns from 'dns';
+import { Resend } from 'resend';
 
 export interface EmailTemplateData {
     [key: string]: string | number | boolean;
@@ -131,7 +130,7 @@ const TRANSLATIONS = {
 @Injectable()
 export class EmailService {
     private readonly logger = new Logger(EmailService.name);
-    private transporter: nodemailer.Transporter | null = null;
+    private resend: Resend | null = null;
     private isConfigured = false;
     private readonly timezone: string;
     private readonly defaultLanguage: Language;
@@ -143,47 +142,14 @@ export class EmailService {
 
         this.logger.log(`Email service initialized with language: ${this.defaultLanguage}, timezone: ${this.timezone}`);
 
-        const smtpHost = this.configService.get<string>('SMTP_HOST') || 'smtp.gmail.com';
-        const smtpPort = this.configService.get<number>('SMTP_PORT') || 587;
-        const smtpUser = this.configService.get<string>('SMTP_USER');
-        const smtpPass = this.configService.get<string>('SMTP_PASS');
+        const resendApiKey = this.configService.get<string>('RESEND_API_KEY');
 
-        if (smtpUser && smtpUser !== 'your_email@gmail.com' && smtpPass) {
-            this.transporter = nodemailer.createTransport({
-                host: smtpHost,
-                port: smtpPort,
-                secure: smtpPort === 465, // true for 465, false for other ports
-                auth: {
-                    user: smtpUser,
-                    pass: smtpPass,
-                },
-                tls: {
-                    // Do not fail on invalid certs or when behind proxies
-                    rejectUnauthorized: false
-                },
-                // Add timeouts so it doesn't hang forever
-                connectionTimeout: 10000,
-                greetingTimeout: 5000,
-                socketTimeout: 20000,
-                // Force IPv4 using a custom lookup function as a fail-safe
-                lookup: (hostname: string, options: any, callback: (err: any, address: string | any, family: number) => void) => {
-                    dns.lookup(hostname, { family: 4 }, callback);
-                }
-            } as any);
-
-            // Verify the connection configuration
-            this.transporter.verify((error, success) => {
-                if (error) {
-                    this.logger.error(`SMTP Connection Error [${smtpHost}:${smtpPort}]:`, error);
-                } else {
-                    this.logger.log('SMTP Server is ready to take our messages');
-                }
-            });
-
+        if (resendApiKey && resendApiKey !== 're_xxxxxxxxx') {
+            this.resend = new Resend(resendApiKey);
             this.isConfigured = true;
-            this.logger.log(`Nodemailer SMTP email service configured on ${smtpHost}:${smtpPort}`);
+            this.logger.log('Resend email service configured');
         } else {
-            this.logger.warn('SMTP credentials not configured. Email notifications will be disabled.');
+            this.logger.warn('Resend API key not configured. Email notifications will be disabled.');
         }
     }
 
@@ -201,7 +167,7 @@ export class EmailService {
     }
 
     /**
-     * Send an email using Nodemailer
+     * Send an email using Resend
      */
     async sendEmail(options: {
         to: string;
@@ -211,24 +177,29 @@ export class EmailService {
         from?: string;
         fromName?: string;
     }): Promise<boolean> {
-        if (!this.isConfigured || !this.transporter) {
+        if (!this.isConfigured || !this.resend) {
             this.logger.warn('Email service not configured. Skipping email to:', options.to);
             return false;
         }
 
         try {
-            const fromEmail = options.from || this.configService.get<string>('SMTP_USER');
+            const fromEmail = options.from || this.configService.get<string>('RESEND_FROM_EMAIL') || 'onboarding@resend.dev';
             const fromName = options.fromName || this.configService.get<string>('EMAIL_FROM_NAME') || 'Brilliant Dental Clinic';
 
-            const info = await this.transporter.sendMail({
-                from: `"${fromName}" <${fromEmail}>`,
-                to: options.to,
+            const { data, error } = await this.resend.emails.send({
+                from: `${fromName} <${fromEmail}>`,
+                to: [options.to],
                 subject: options.subject,
-                text: options.text || this.stripHtml(options.html),
                 html: options.html,
+                text: options.text || this.stripHtml(options.html),
             });
 
-            this.logger.log(`Email sent successfully to ${options.to}, Message ID: ${info.messageId}`);
+            if (error) {
+                this.logger.error(`Failed to send email to ${options.to}:`, error);
+                return false;
+            }
+
+            this.logger.log(`Email sent successfully to ${options.to}, Message ID: ${data?.id}`);
             return true;
         } catch (error) {
             this.logger.error(`Failed to send email to ${options.to}:`, error.message);
