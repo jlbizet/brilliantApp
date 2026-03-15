@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Resend } from 'resend';
+import { BrevoClient } from '@getbrevo/brevo';
 
 export interface EmailTemplateData {
     [key: string]: string | number | boolean;
@@ -130,7 +130,7 @@ const TRANSLATIONS = {
 @Injectable()
 export class EmailService {
     private readonly logger = new Logger(EmailService.name);
-    private resend: Resend | null = null;
+    private brevoClient: BrevoClient | null = null;
     private isConfigured = false;
     private readonly timezone: string;
     private readonly defaultLanguage: Language;
@@ -142,14 +142,14 @@ export class EmailService {
 
         this.logger.log(`Email service initialized with language: ${this.defaultLanguage}, timezone: ${this.timezone}`);
 
-        const resendApiKey = this.configService.get<string>('RESEND_API_KEY');
+        const brevoApiKey = this.configService.get<string>('BREVO_API_KEY');
 
-        if (resendApiKey && resendApiKey !== 're_xxxxxxxxx') {
-            this.resend = new Resend(resendApiKey);
+        if (brevoApiKey && brevoApiKey.startsWith('xkeysib-')) {
+            this.brevoClient = new BrevoClient({ apiKey: brevoApiKey });
             this.isConfigured = true;
-            this.logger.log('Resend email service configured');
+            this.logger.log('Brevo email service configured');
         } else {
-            this.logger.warn('Resend API key not configured. Email notifications will be disabled.');
+            this.logger.warn('Brevo API key not configured. Email notifications will be disabled.');
         }
     }
 
@@ -167,7 +167,7 @@ export class EmailService {
     }
 
     /**
-     * Send an email using Resend
+     * Send an email using Brevo
      */
     async sendEmail(options: {
         to: string;
@@ -177,32 +177,27 @@ export class EmailService {
         from?: string;
         fromName?: string;
     }): Promise<boolean> {
-        if (!this.isConfigured || !this.resend) {
+        if (!this.isConfigured || !this.brevoClient) {
             this.logger.warn('Email service not configured. Skipping email to:', options.to);
             return false;
         }
 
         try {
-            const fromEmail = options.from || this.configService.get<string>('RESEND_FROM_EMAIL') || 'onboarding@resend.dev';
+            const fromEmail = options.from || this.configService.get<string>('BREVO_SENDER_EMAIL') || 'your-verified-email@example.com';
             const fromName = options.fromName || this.configService.get<string>('EMAIL_FROM_NAME') || 'Brilliant Dental Clinic';
 
-            const { data, error } = await this.resend.emails.send({
-                from: `${fromName} <${fromEmail}>`,
-                to: [options.to],
+            const result = await this.brevoClient.transactionalEmails.sendTransacEmail({
+                to: [{ email: options.to }],
+                sender: { email: fromEmail, name: fromName },
                 subject: options.subject,
-                html: options.html,
-                text: options.text || this.stripHtml(options.html),
-            });
+                htmlContent: options.html,
+                textContent: options.text || this.stripHtml(options.html),
+            }) as any;
 
-            if (error) {
-                this.logger.error(`Failed to send email to ${options.to}:`, error);
-                return false;
-            }
-
-            this.logger.log(`Email sent successfully to ${options.to}, Message ID: ${data?.id}`);
+            this.logger.log(`Email sent successfully to ${options.to}, Message ID: ${result.body?.messageId || 'N/A'}`);
             return true;
-        } catch (error) {
-            this.logger.error(`Failed to send email to ${options.to}:`, error.message);
+        } catch (error: any) {
+            this.logger.error(`Failed to send email to ${options.to}:`, error.message || error);
             return false;
         }
     }
