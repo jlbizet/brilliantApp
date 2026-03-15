@@ -1,4 +1,14 @@
 ﻿{
+    "validation": {
+        "required": "This field is required",
+        "invalid_email": "Invalid email format",
+        "min_length": "Minimum {{min}} characters",
+        "max_length": "Maximum {{max}} characters",
+        "invalid_date": "Invalid date",
+        "invalid_phone": "Invalid phone number",
+        "password_mismatch": "Passwords do not match",
+        "invalid_credentials": "Invalid credentials"
+    },
     "common": {
         "dashboard": "Dashboard",
         "patients": "Patients",

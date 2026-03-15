@@ -9,12 +9,12 @@ import { Heart, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { authApi } from '../../api';
 import { useAuthStore } from '../../stores';
 
-const loginSchema = z.object({
-    email: z.string().email('Invalid email address'),
-    password: z.string().min(6, 'Password must be at least 6 characters'),
+const getLoginSchema = (t: (key: string, options?: any) => string) => z.object({
+    email: z.string().min(1, t('validation.required')).email(t('validation.invalid_email')),
+    password: z.string().min(1, t('validation.required')).min(6, t('validation.min_length', { min: 6 })),
 });
 
-type LoginForm = z.infer<typeof loginSchema>;
+type LoginForm = z.infer<ReturnType<typeof getLoginSchema>>;
 
 export default function LoginPage() {
     const { t } = useTranslation();
@@ -23,8 +23,8 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
-    const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
-        resolver: zodResolver(loginSchema),
+    const { register, handleSubmit, formState: { errors }, setError } = useForm<LoginForm>({
+        resolver: zodResolver(getLoginSchema(t)),
         defaultValues: { email: 'admin@dentalcrm.com', password: 'admin123' },
     });
 
@@ -36,7 +36,14 @@ export default function LoginPage() {
             toast.success(`${t('auth.welcome_back_user', { name: result.user.firstName })}`);
             navigate('/dashboard');
         } catch (error: any) {
-            toast.error(error.response?.data?.message?.[0] || t('auth.error_invalid_credentials'));
+            const response = error.response?.data;
+            if (response?.errors) {
+                Object.entries(response.errors).forEach(([field, message]) => {
+                    setError(field as keyof LoginForm, { message: message as string });
+                });
+            } else {
+                toast.error(response?.message?.[0] || t('validation.invalid_credentials'));
+            }
         } finally {
             setLoading(false);
         }

@@ -1,4 +1,14 @@
 ﻿{
+  "validation": {
+    "required": "Este campo es requerido",
+    "invalid_email": "Formato de correo electrónico inválido",
+    "min_length": "Mínimo {{min}} caracteres",
+    "max_length": "Máximo {{max}} caracteres",
+    "invalid_date": "Fecha inválida",
+    "invalid_phone": "Número de teléfono inválido",
+    "password_mismatch": "Las contraseñas no coinciden",
+    "invalid_credentials": "Credenciales inválidas"
+  },
   "common": {
     "dashboard": "Tablero",
     "patients": "Pacientes",

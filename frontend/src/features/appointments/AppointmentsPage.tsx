@@ -46,6 +46,7 @@ export default function AppointmentsPage() {
     });
     const [selectedDentists, setSelectedDentists] = useState<string[]>([]);
     const [currentDate, setCurrentDate] = useState(new Date());
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     const { data: appointments } = useQuery({
         queryKey: ['calendar-appointments', dateRange, selectedDentists],
@@ -83,8 +84,17 @@ export default function AppointmentsPage() {
             queryClient.invalidateQueries({ queryKey: ['calendar-appointments'] });
             toast.success(t('appointments.create_success') || 'Appointment created!');
             setShowForm(false);
+            setFieldErrors({});
         },
-        onError: (err: any) => toast.error(err.response?.data?.message?.[0] || t('appointments.create_error') || 'Failed to create appointment'),
+        onError: (err: any) => {
+            const response = err.response?.data;
+            if (response?.errors) {
+                setFieldErrors(response.errors);
+                toast.error(t('appointments.create_error') || 'Failed to create appointment');
+            } else {
+                toast.error(response?.message?.[0] || t('appointments.create_error') || 'Failed to create appointment');
+            }
+        },
     });
 
     const events = (appointments || []).map((apt: Appointment) => ({
@@ -177,6 +187,7 @@ export default function AppointmentsPage() {
                             <h3 className="font-bold text-gray-900 dark:text-white mb-4">{t('appointments.new')}</h3>
                             <form onSubmit={(e) => {
                                 e.preventDefault();
+                                setFieldErrors({});
                                 const submitData = { ...formData };
                                 submitData.startTime = toISOString(new Date(formData.startTime));
                                 submitData.endTime = toISOString(new Date(formData.endTime));
@@ -193,18 +204,22 @@ export default function AppointmentsPage() {
                                 createMutation.mutate(submitData);
                             }} className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div><label className="label">{t('common.patient')} *</label>
-                                    <select className="input-field" value={formData.patientId} onChange={e => setFormData({ ...formData, patientId: e.target.value })} required>
+                                    <select className={`input-field ${fieldErrors.patientId ? 'border-red-500' : ''}`} value={formData.patientId} onChange={e => setFormData({ ...formData, patientId: e.target.value })} required>
                                         <option value="">{t('patients.select_patient')}</option>
                                         {patients?.data.map((p: any) => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}
                                     </select>
+                                    {fieldErrors.patientId && <p className="text-red-500 text-xs mt-1">{fieldErrors.patientId}</p>}
                                 </div>
                                 <div><label className="label">{t('common.dentist')} *</label>
-                                    <select className="input-field" value={formData.dentistId} onChange={e => setFormData({ ...formData, dentistId: e.target.value })} required>
+                                    <select className={`input-field ${fieldErrors.dentistId ? 'border-red-500' : ''}`} value={formData.dentistId} onChange={e => setFormData({ ...formData, dentistId: e.target.value })} required>
                                         <option value="">{t('appointments.select_dentist')}</option>
                                         {dentists?.map((d: any) => <option key={d.id} value={d.id}>Dr. {d.firstName} {d.lastName}</option>)}
                                     </select>
+                                    {fieldErrors.dentistId && <p className="text-red-500 text-xs mt-1">{fieldErrors.dentistId}</p>}
                                 </div>
-                                <div><label className="label">{t('common.title')} *</label><input className="input-field" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} required /></div>
+                                <div><label className="label">{t('common.title')} *</label><input className={`input-field ${fieldErrors.title ? 'border-red-500' : ''}`} value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} required />
+                                    {fieldErrors.title && <p className="text-red-500 text-xs mt-1">{fieldErrors.title}</p>}
+                                </div>
                                 <div><label className="label">{t('common.type')}</label>
                                     <select className="input-field" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
                                         <option value="general">{t('appointments.type_general')}</option><option value="cleaning">{t('appointments.type_cleaning')}</option><option value="emergency">{t('appointments.type_emergency')}</option><option value="follow-up">{t('appointments.type_follow_up')}</option><option value="consultation">{t('appointments.type_consultation')}</option>
@@ -224,7 +239,9 @@ export default function AppointmentsPage() {
                                                 const end = new Date(newDate.getTime() + 30 * 60000);
                                                 setFormData({ ...formData, startTime: toISOString(newDate), endTime: toISOString(end) });
                                             }}
+                                            className={fieldErrors.startTime ? 'border-red-500' : ''}
                                         />
+                                        {fieldErrors.startTime && <p className="text-red-500 text-xs mt-1">{fieldErrors.startTime}</p>}
                                     </div>
                                     <div>
                                         <label className="label">{t('common.time')} *</label>

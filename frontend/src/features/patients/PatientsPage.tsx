@@ -17,6 +17,7 @@ export default function PatientsPage() {
     const [search, setSearch] = useState('');
     const [showForm, setShowForm] = useState(false);
     const [formData, setFormData] = useState({ firstName: '', lastName: '', email: '', phone: '', dateOfBirth: '', gender: 'PREFER_NOT_TO_SAY' });
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     const { data: patients, isLoading } = useQuery({
         queryKey: ['patients', page, search],
@@ -30,8 +31,17 @@ export default function PatientsPage() {
             toast.success(t('patients.create_success') || 'Patient created successfully');
             setShowForm(false);
             setFormData({ firstName: '', lastName: '', email: '', phone: '', dateOfBirth: '', gender: 'PREFER_NOT_TO_SAY' });
+            setFieldErrors({});
         },
-        onError: (err: any) => toast.error(err.response?.data?.message?.[0] || t('patients.create_error') || 'Failed to create patient'),
+        onError: (err: any) => {
+            const response = err.response?.data;
+            if (response?.errors) {
+                setFieldErrors(response.errors);
+                toast.error(t('patients.create_error') || 'Failed to create patient');
+            } else {
+                toast.error(response?.message?.[0] || t('patients.create_error') || 'Failed to create patient');
+            }
+        },
     });
 
     const deleteMutation = useMutation({
@@ -130,32 +140,37 @@ export default function PatientsPage() {
                         </div>
                     </div>
                     <form
-                        onSubmit={(e) => { e.preventDefault(); createMutation.mutate(formData); }}
+                        onSubmit={(e) => { e.preventDefault(); setFieldErrors({}); createMutation.mutate(formData); }}
                         className="grid grid-cols-1 md:grid-cols-3 gap-4"
                     >
                         <div>
                             <label className="label text-sm font-medium text-gray-700 dark:text-gray-300">{t('patients.first_name')} *</label>
-                            <input className="input-field mt-1" value={formData.firstName} onChange={e => setFormData({ ...formData, firstName: e.target.value })} required />
+                            <input className={`input-field mt-1 ${fieldErrors.firstName ? 'border-red-500 focus:ring-red-500' : ''}`} value={formData.firstName} onChange={e => setFormData({ ...formData, firstName: e.target.value })} required />
+                            {fieldErrors.firstName && <p className="text-red-500 text-xs mt-1">{fieldErrors.firstName}</p>}
                         </div>
                         <div>
                             <label className="label text-sm font-medium text-gray-700 dark:text-gray-300">{t('patients.last_name')} *</label>
-                            <input className="input-field mt-1" value={formData.lastName} onChange={e => setFormData({ ...formData, lastName: e.target.value })} required />
+                            <input className={`input-field mt-1 ${fieldErrors.lastName ? 'border-red-500 focus:ring-red-500' : ''}`} value={formData.lastName} onChange={e => setFormData({ ...formData, lastName: e.target.value })} required />
+                            {fieldErrors.lastName && <p className="text-red-500 text-xs mt-1">{fieldErrors.lastName}</p>}
                         </div>
                         <div>
                             <label className="label text-sm font-medium text-gray-700 dark:text-gray-300">{t('patients.phone')} *</label>
-                            <input className="input-field mt-1" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} required />
+                            <input className={`input-field mt-1 ${fieldErrors.phone ? 'border-red-500 focus:ring-red-500' : ''}`} value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} required />
+                            {fieldErrors.phone && <p className="text-red-500 text-xs mt-1">{fieldErrors.phone}</p>}
                         </div>
                         <div>
                             <label className="label text-sm font-medium text-gray-700 dark:text-gray-300">{t('patients.email')}</label>
-                            <input type="email" className="input-field mt-1" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                            <input type="email" className={`input-field mt-1 ${fieldErrors.email ? 'border-red-500 focus:ring-red-500' : ''}`} value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                            {fieldErrors.email && <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>}
                         </div>
                         <div>
                             <label className="label text-sm font-medium text-gray-700 dark:text-gray-300">{t('patients.date_of_birth')} *</label>
                             <DatePicker
                                 value={formData.dateOfBirth}
                                 onChange={(date) => setFormData({ ...formData, dateOfBirth: date })}
-                                className="mt-1"
+                                className={`mt-1 ${fieldErrors.dateOfBirth ? 'border-red-500' : ''}`}
                             />
+                            {fieldErrors.dateOfBirth && <p className="text-red-500 text-xs mt-1">{fieldErrors.dateOfBirth}</p>}
                         </div>
                         <div>
                             <label className="label text-sm font-medium text-gray-700 dark:text-gray-300">{t('patients.gender')}</label>

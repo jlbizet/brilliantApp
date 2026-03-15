@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -22,9 +22,25 @@ async function bootstrap() {
     app.useGlobalPipes(
         new ValidationPipe({
             whitelist: true,
-            forbidNonWhitelisted: false, // Allow extra fields (filtered in service layer)
+            forbidNonWhitelisted: false,
             transform: true,
             transformOptions: { enableImplicitConversion: true },
+            exceptionFactory: (errors) => {
+                const formattedErrors: Record<string, string> = {};
+                errors.forEach((error) => {
+                    if (error.constraints) {
+                        const messages = Object.values(error.constraints);
+                        formattedErrors[error.property] = messages[0];
+                    }
+                });
+                const exception = new BadRequestException({
+                    message: 'Validation failed',
+                    error: 'Bad Request',
+                    statusCode: 400,
+                    errors: formattedErrors,
+                });
+                return exception;
+            },
         }),
     );
 
