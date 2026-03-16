@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { usersApi } from '../../api';
 import { User, UserRole } from '../../types';
 import StaffForm from './components/StaffForm';
+import { getErrorMessage } from '../../utils/errors';
 
 const ROLE_CONFIG: Record<UserRole, { color: string; bg: string; gradient: string }> = {
     ADMIN: { 
@@ -49,7 +50,7 @@ export default function StaffPage() {
             toast.success(t('staff.create_success') || 'Staff member created successfully');
             setShowForm(false);
         },
-        onError: (err: any) => toast.error(err.response?.data?.message?.[0] || 'Failed to create staff member'),
+        onError: (err: any) => toast.error(getErrorMessage(err, t('staff.create_error'))),
     });
 
     const updateMutation = useMutation({
@@ -60,7 +61,7 @@ export default function StaffPage() {
             setEditingUser(null);
             setShowForm(false);
         },
-        onError: (err: any) => toast.error(err.response?.data?.message?.[0] || 'Failed to update staff'),
+        onError: (err: any) => toast.error(getErrorMessage(err, t('staff.update_error'))),
     });
 
     const deleteMutation = useMutation({

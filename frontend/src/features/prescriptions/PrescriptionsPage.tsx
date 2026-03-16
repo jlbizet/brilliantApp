@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../../stores';
 import { prescriptionsApi, patientsApi } from '../../api';
 import type { Prescription, Patient } from '../../types';
+import { getErrorMessage } from '../../utils/errors';
 
 export default function PrescriptionsPage() {
     const { t } = useTranslation();
@@ -42,7 +43,7 @@ export default function PrescriptionsPage() {
             toast.success(t('prescriptions.create_success') || 'Prescription created successfully');
             resetForm();
         },
-        onError: (err: any) => toast.error(err.response?.data?.message || t('prescriptions.create_error') || 'Failed to create prescription'),
+        onError: (err: any) => toast.error(getErrorMessage(err, t('prescriptions.create_error'))),
     });
 
     const updateMutation = useMutation({
@@ -52,7 +53,7 @@ export default function PrescriptionsPage() {
             toast.success(t('prescriptions.update_success') || 'Prescription updated successfully');
             resetForm();
         },
-        onError: (err: any) => toast.error(err.response?.data?.message || t('prescriptions.update_error') || 'Failed to update prescription'),
+        onError: (err: any) => toast.error(getErrorMessage(err, t('prescriptions.update_error'))),
     });
 
     const deleteMutation = useMutation({
@@ -61,7 +62,7 @@ export default function PrescriptionsPage() {
             queryClient.invalidateQueries({ queryKey: ['prescriptions'] });
             toast.success(t('prescriptions.delete_success') || 'Prescription deleted successfully');
         },
-        onError: (err: any) => toast.error(err.response?.data?.message || t('prescriptions.delete_error') || 'Failed to delete prescription'),
+        onError: (err: any) => toast.error(getErrorMessage(err, t('prescriptions.delete_error'))),
     });
 
     const resetForm = () => {

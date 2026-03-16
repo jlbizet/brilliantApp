@@ -8,6 +8,7 @@ import { useAuthStore } from '../../stores';
 import { patientsApi } from '../../api';
 import type { Patient } from '../../types';
 import { DatePicker } from '../../components/ui';
+import { getErrorMessage } from '../../utils/errors';
 
 export default function PatientsPage() {
     const { t } = useTranslation();
@@ -35,11 +36,11 @@ export default function PatientsPage() {
         },
         onError: (err: any) => {
             const response = err.response?.data;
-            if (response?.errors) {
+            if (response?.errors && typeof response.errors === 'object') {
                 setFieldErrors(response.errors);
-                toast.error(t('patients.create_error') || 'Failed to create patient');
+                toast.error(getErrorMessage(err, t('patients.create_error')));
             } else {
-                toast.error(response?.message?.[0] || t('patients.create_error') || 'Failed to create patient');
+                toast.error(getErrorMessage(err, t('patients.create_error')));
             }
         },
     });

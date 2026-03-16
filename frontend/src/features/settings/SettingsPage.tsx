@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { useAuthStore, useUIStore } from '../../stores';
 import { usersApi } from '../../api';
 import { Moon, Sun, User, Shield, Building2, Edit, X, Check, Lock } from 'lucide-react';
+import { getErrorMessage } from '../../utils/errors';
 
 export default function SettingsPage() {
     const { t } = useTranslation();
@@ -32,7 +33,7 @@ export default function SettingsPage() {
             toast.success(t('settings.update_success') || 'Profile updated successfully');
             setIsEditingProfile(false);
         },
-        onError: (err: any) => toast.error(err.response?.data?.message || t('settings.update_error') || 'Failed to update profile'),
+        onError: (err: any) => toast.error(getErrorMessage(err, t('settings.update_error'))),
     });
 
     const updatePasswordMutation = useMutation({
@@ -43,7 +44,7 @@ export default function SettingsPage() {
             setShowPasswordModal(false);
             setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
         },
-        onError: (err: any) => toast.error(err.response?.data?.message || t('settings.password_error') || 'Failed to update password'),
+        onError: (err: any) => toast.error(getErrorMessage(err, t('settings.password_error'))),
     });
 
     const handleProfileSave = () => {

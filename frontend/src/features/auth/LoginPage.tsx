@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { Heart, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { authApi } from '../../api';
 import { useAuthStore } from '../../stores';
+import { getErrorMessage } from '../../utils/errors';
 
 const getLoginSchema = (t: (key: string, options?: any) => string) => z.object({
     email: z.string().min(1, t('validation.required')).email(t('validation.invalid_email')),
@@ -37,12 +38,12 @@ export default function LoginPage() {
             navigate('/dashboard');
         } catch (error: any) {
             const response = error.response?.data;
-            if (response?.errors) {
+            if (response?.errors && typeof response.errors === 'object') {
                 Object.entries(response.errors).forEach(([field, message]) => {
                     setError(field as keyof LoginForm, { message: message as string });
                 });
             } else {
-                toast.error(response?.message?.[0] || t('validation.invalid_credentials'));
+                toast.error(getErrorMessage(error, t('validation.invalid_credentials')));
             }
         } finally {
             setLoading(false);

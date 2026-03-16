@@ -228,7 +228,7 @@ export default function NotificationsPage() {
                                             }`}>
                                                 {notification.title}
                                             </h3>
-                                            <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                                            <p className="text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
                                                 {notification.message}
                                             </p>
                                             <p className="text-xs font-medium text-gray-400 mt-2 flex items-center gap-1">

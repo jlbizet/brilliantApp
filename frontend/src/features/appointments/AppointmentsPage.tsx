@@ -12,6 +12,7 @@ import type { Appointment } from '../../types';
 import AppointmentDetailsModal from './components/AppointmentDetailsModal';
 import { DatePicker, TimePicker } from '../../components/ui';
 import { toISOString, toDateString } from '../../utils/timezone';
+import { getErrorMessage } from '../../utils/errors';
 
 function toLocalDateString(dateStr: string): string {
     if (!dateStr) return '';
@@ -88,11 +89,11 @@ export default function AppointmentsPage() {
         },
         onError: (err: any) => {
             const response = err.response?.data;
-            if (response?.errors) {
+            if (response?.errors && typeof response.errors === 'object') {
                 setFieldErrors(response.errors);
-                toast.error(t('appointments.create_error') || 'Failed to create appointment');
+                toast.error(getErrorMessage(err, t('appointments.create_error')));
             } else {
-                toast.error(response?.message?.[0] || t('appointments.create_error') || 'Failed to create appointment');
+                toast.error(getErrorMessage(err, t('appointments.create_error')));
             }
         },
     });
