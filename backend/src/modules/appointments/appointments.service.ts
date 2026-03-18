@@ -447,14 +447,14 @@ export class AppointmentsService {
         this.logger.log('[SameDayReminders] Starting hourly reminder check...');
 
         const now = new Date();
-        const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-        const twoHoursAndFiveMinutesLater = new Date(now.getTime() + (2 * 60 + 5) * 60 * 1000);
+        const oneHourLater = new Date(now.getTime() + 1.5 * 60 * 60 * 1000);
+        const threeHoursLater = new Date(now.getTime() + 3 * 60 * 60 * 1000);
 
         const upcoming = await this.prisma.appointment.findMany({
             where: {
                 startTime: {
-                    gte: twoHoursLater,
-                    lt: twoHoursAndFiveMinutesLater
+                    gte: oneHourLater,
+                    lt: threeHoursLater
                 },
                 status: 'SCHEDULED',
             },
