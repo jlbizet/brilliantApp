@@ -9,7 +9,8 @@ import * as dns from 'dns';
 dns.setDefaultResultOrder('ipv4first');
 
 async function bootstrap() {
-    const app = await NestFactory.create(AppModule);
+    // rawBody keeps the unparsed request body available for webhook HMAC verification
+    const app = await NestFactory.create(AppModule, { rawBody: true });
 
     // Security
     app.use(helmet());
@@ -43,9 +44,6 @@ async function bootstrap() {
             },
         }),
     );
-
-    // API prefix
-    app.setGlobalPrefix('api/v1');
 
     // API prefix
     app.setGlobalPrefix('api/v1');
