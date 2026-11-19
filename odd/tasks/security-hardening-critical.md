@@ -38,4 +38,11 @@ Branch: `feature/railway-deployment` | Delivery: work-unit commits (chained PR i
 - Assess: `risk=high`, `review_due=true` (base `fff877c`, committed-only).
 - Consent relayed; user granted. START created lineage `review-455d3a3dabe6241c` with lenses `review-risk,review-resilience,review-reliability`.
 - All three reviewer captures refused twice with `opencode_review_transport_relay_refused (reason: provider_failed)`; a retained bound STATUS reoffered the identical slots and the retry failed the same way.
-- Outcome: no native review verdict. This is **unavailable**, not approval. Delivery remains under ordinary repository policy.
+- Outcome: no native review verdict at that point. This was **unavailable**, not approval.
+
+### L5 - Native review closed: approved
+- Recovery: the three lens captures were admitted through the bound `opencode-transport` relay (`review-risk`, `review-resilience`, `review-reliability`). The earlier `provider_failed` frames were a host-plugin artifact; the reviewer sessions completed.
+- Refuter batch: the only severe candidate-caused finding was `R4-verify-token-inversion` (reliability lens). The refuter returned `refuted`: `backend/src/modules/whatsapp/whatsapp-webhook.controller.ts:42` negates the match, so a matching token falls through to `return challenge`, and `whatsapp-webhook.controller.spec.ts:84-90` covers that path. Manual re-read confirmed the reviewer inverted the negation.
+- Terminal outcome: `state: approved`; `review acknowledge-approved` burned authority and printed `gentle-ai.review-acknowledged/v1` (target `sha256:6896f316924f59be389c2a80c6066d2cb1ced335496e0b132b612127179d58f6`, consumed revision `sha256:f50d7c1c673596518019fb3b0728937e672e930aaa6d3d0a49fa7585e4446c11`, `authority: burned`).
+- Independent verifier: S1-S5 met, zero blockers. Advisories (not acted on, out of the critical scope): `POST /whatsapp/webhook` now returns 200 instead of 201; the three scripts exit 0 on failure; `/appointments/test-reminders` and `/test-same-day-reminders` trigger jobs without the cron secret; `backend/.env.test` was deleted with no tracked replacement.
+- Review lifecycle closed. Commit, push, PR and release remain separate human decisions under ordinary repository policy.
