@@ -33,3 +33,9 @@ Branch: `feature/railway-deployment` | Delivery: work-unit commits (chained PR i
 - Rotate every secret that was tracked: Brevo, Twilio, Gemini, Kapso, Google service-account key, JWT secrets, DB password.
 - Purging the credentials from git history (`git filter-repo`) is destructive and was NOT performed; requires explicit approval.
 - Configure `CRON_SECRET`, `WHATSAPP_WEBHOOK_SECRET` (and `META_APP_SECRET` if raw Meta forwarding is used) in Railway and in the external cron caller.
+
+### L4 — Native review (RDD) unavailable
+- Assess: `risk=high`, `review_due=true` (base `fff877c`, committed-only).
+- Consent relayed; user granted. START created lineage `review-455d3a3dabe6241c` with lenses `review-risk,review-resilience,review-reliability`.
+- All three reviewer captures refused twice with `opencode_review_transport_relay_refused (reason: provider_failed)`; a retained bound STATUS reoffered the identical slots and the retry failed the same way.
+- Outcome: no native review verdict. This is **unavailable**, not approval. Delivery remains under ordinary repository policy.
