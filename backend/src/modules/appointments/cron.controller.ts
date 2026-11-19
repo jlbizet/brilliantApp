@@ -1,8 +1,15 @@
-import { Controller, Post } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Controller, Post, UseGuards } from '@nestjs/common';
+import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CronSecretGuard } from '../../common/guards';
 import { AppointmentsService } from './appointments.service';
 
 @ApiTags('Cron Jobs')
+@ApiHeader({
+    name: 'x-cron-secret',
+    description: 'Shared secret matching the CRON_SECRET environment variable',
+    required: true,
+})
+@UseGuards(CronSecretGuard)
 @Controller('cron')
 export class CronController {
     constructor(private readonly appointmentsService: AppointmentsService) { }
