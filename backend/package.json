@@ -14,7 +14,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "ts-node prisma/seed.ts",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",
@@ -39,7 +40,8 @@
     "reflect-metadata": "^0.2.1",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.3",
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.0",
+    "@nestjs/cli": "^10.3.0"
   },
   "devDependencies": {
     "@nestjs/schematics": "^10.1.0",
@@ -62,8 +64,7 @@
     "source-map-support": "^0.5.21",
     "ts-jest": "^29.1.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3",
-    "@nestjs/cli": "^10.3.0"
+    "typescript": "^5.3.3"
   },
   "jest": {
     "moduleFileExtensions": [
