@@ -7,8 +7,8 @@ import { AuthService } from './auth.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto, RegisterDto } from './dto';
 
-// Mock bcrypt
-jest.mock('bcrypt', () => ({
+// Mock bcryptjs
+jest.mock('bcryptjs', () => ({
     hash: jest.fn(),
     compare: jest.fn(),
 }));
