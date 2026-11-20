@@ -42,4 +42,7 @@ async function bootstrap() {
     console.log(`🦷 Dental CRM API running on http://localhost:${port}`);
     console.log(`📚 API Docs: http://localhost:${port}/api/docs`);
 }
-bootstrap();
+bootstrap().catch((err) => {
+    console.error('BOOTSTRAP FAILED:', err?.stack || err);
+    process.exit(1);
+});
