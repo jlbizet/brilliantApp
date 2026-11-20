@@ -63,4 +63,7 @@ async function bootstrap() {
     console.log(`🦷 Dental CRM API running on `);
     console.log(`📚 API Docs available.`);
 }
-bootstrap();
+bootstrap().catch((err) => {
+    console.error('BOOTSTRAP FAILED:', err?.stack || err);
+    process.exit(1);
+});
