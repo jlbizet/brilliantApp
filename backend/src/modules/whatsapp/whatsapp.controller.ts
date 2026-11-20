@@ -1,4 +1,9 @@
-import { Controller, Post, Body, Logger } from '@nestjs/common';
+import { Controller, Post, Body, Logger, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
+import { Roles } from '../../common/decorators';
+import { RolesGuard } from '../../common/guards';
 import { WhatsAppService } from './whatsapp.service';
 
 class TestMessageDto {
@@ -17,6 +22,9 @@ class TestTemplateDto {
     };
 }
 
+@ApiBearerAuth()
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@Roles(UserRole.ADMIN)
 @Controller('whatsapp')
 export class WhatsAppController {
     private readonly logger = new Logger(WhatsAppController.name);
@@ -59,7 +67,6 @@ export class WhatsAppController {
                 success: false,
                 message: 'Error sending text message',
                 error: error.message,
-                stack: error.stack,
                 phone: phone,
             };
         }

@@ -1,13 +1,20 @@
-import { Controller, Post, Body, Get } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { UserRole } from '@prisma/client';
 import { AIChatAgentService } from './ai-chat-agent.service';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Roles } from '../../common/decorators';
+import { RolesGuard } from '../../common/guards';
 
 @ApiTags('chatbot')
+@ApiBearerAuth()
+@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('chatbot')
 export class ChatbotController {
     constructor(private readonly aiChatAgentService: AIChatAgentService) { }
 
     @Post('test-ai')
+    @Roles(UserRole.ADMIN)
     @ApiOperation({ summary: 'Test AI agent with a message' })
     @ApiResponse({ status: 200, description: 'AI response' })
     async testAI(@Body() data: { message: string; patientId?: string }) {
