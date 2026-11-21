@@ -12,7 +12,7 @@ import { useNotificationsSocket } from '../../hooks/useNotificationsSocket';
 export default function Header() {
     const { user, setUser } = useAuthStore();
     const { darkMode, toggleDarkMode } = useUIStore();
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [showNotifications, setShowNotifications] = useState(false);
@@ -83,11 +83,11 @@ export default function Header() {
         const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
         if (diffInHours < 1) {
-            return 'Just now';
+            return t('common.just_now');
         } else if (diffInHours < 24) {
-            return `${Math.floor(diffInHours)}h ago`;
+            return t('common.hours_ago', { count: Math.floor(diffInHours) });
         } else {
-            return date.toLocaleDateString();
+            return date.toLocaleDateString(i18n.language);
         }
     };
 
@@ -140,7 +140,7 @@ export default function Header() {
                             <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-primary-50/50 to-transparent dark:from-primary-900/10 dark:to-transparent">
                                 <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                     <Bell className="w-4 h-4 text-primary-500" />
-                                    Notifications
+                                    {t('notifications.title')}
                                 </h3>
                                 {unreadCount && unreadCount > 0 && (
                                     <button
@@ -148,7 +148,7 @@ export default function Header() {
                                         className="text-sm font-semibold text-primary-600 hover:text-primary-700 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-all"
                                     >
                                         <Check className="w-4 h-4" />
-                                        Mark all read
+                                        {t('notifications.mark_all_read')}
                                     </button>
                                 )}
                             </div>
@@ -159,7 +159,7 @@ export default function Header() {
                                         <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-primary-50 dark:from-primary-900/30 dark:to-primary-800/20 rounded-full flex items-center justify-center mx-auto mb-4">
                                             <Bell className="w-8 h-8 text-primary-400" />
                                         </div>
-                                        <p className="font-medium text-gray-500">No notifications yet</p>
+                                        <p className="font-medium text-gray-500">{t('notifications.none_yet')}</p>
                                     </div>
                                 ) : (
                                     notifications.map((notification: Notification) => (
@@ -218,7 +218,7 @@ export default function Header() {
                                 }}
                             >
                                 <div className="flex items-center justify-center gap-2 text-primary-600 dark:text-primary-400 font-semibold text-sm hover:gap-3 transition-all duration-200">
-                                    View all notifications
+                                    {t('notifications.view_all')}
                                     <ChevronRight className="w-4 h-4" />
                                 </div>
                             </div>
@@ -237,7 +237,7 @@ export default function Header() {
                             </p>
                             <p className="text-xs font-medium text-gray-500 flex items-center gap-1">
                                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                                {user.role}
+                                {t(`staff.role_${user.role.toLowerCase()}`)}
                             </p>
                         </div>
                     </div>

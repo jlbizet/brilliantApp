@@ -47,7 +47,7 @@ export default function StaffPage() {
         mutationFn: usersApi.create,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['staff'] });
-            toast.success(t('staff.create_success') || 'Staff member created successfully');
+            toast.success(t('staff.create_success'));
             setShowForm(false);
         },
         onError: (err: any) => toast.error(getErrorMessage(err, t('staff.create_error'))),
@@ -57,7 +57,7 @@ export default function StaffPage() {
         mutationFn: ({ id, data }: { id: string, data: any }) => usersApi.update(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['staff'] });
-            toast.success(t('staff.update_success') || 'Staff updated successfully');
+            toast.success(t('staff.update_success'));
             setEditingUser(null);
             setShowForm(false);
         },
@@ -68,9 +68,9 @@ export default function StaffPage() {
         mutationFn: (id: string) => usersApi.delete(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['staff'] });
-            toast.success(t('staff.delete_success') || 'Staff member deleted successfully');
+            toast.success(t('staff.delete_success'));
         },
-        onError: (err: any) => toast.error('Failed to delete staff member'),
+        onError: (err: any) => toast.error(getErrorMessage(err, t('staff.delete_error'))),
     });
 
     const handleFormSubmit = (data: any) => {
@@ -87,7 +87,7 @@ export default function StaffPage() {
     };
 
     const handleDelete = (id: string) => {
-        if (window.confirm(t('staff.delete_confirm') || 'Are you sure you want to delete this staff member?')) {
+        if (window.confirm(t('staff.delete_confirm'))) {
             deleteMutation.mutate(id);
         }
     };

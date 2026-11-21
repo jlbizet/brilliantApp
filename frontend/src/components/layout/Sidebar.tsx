@@ -101,7 +101,7 @@ export default function Sidebar() {
                                 <p className="text-sm font-semibold text-white truncate">
                                     {user.firstName} {user.lastName}
                                 </p>
-                                <p className="text-xs text-gray-500 truncate uppercase tracking-wider">{user.role}</p>
+                                <p className="text-xs text-gray-500 truncate uppercase tracking-wider">{t(`staff.role_${user.role.toLowerCase()}`)}</p>
                             </div>
                         </div>
                     </div>

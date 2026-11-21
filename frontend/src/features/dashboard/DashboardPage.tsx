@@ -7,6 +7,7 @@ import { format, subDays, startOfMonth, endOfMonth, startOfYear, subMonths } fro
 import { analyticsApi } from '../../api';
 import { useAuthStore } from '../../stores';
 import { DatePicker } from '../../components/ui';
+import { getDateLocale } from '../../utils/dateLocale';
 
 const COLORS = ['#338dfc', '#22c55e', '#f59e0b', '#f43f5e', '#8b5cf6', '#0ea5e9'];
 
@@ -15,12 +16,12 @@ type IconType = React.ComponentType<{ className?: string }>;
 
 // Quick filter options
 const QUICK_FILTERS = [
-    { label: 'Today', days: 0 },
-    { label: 'Last 7 Days', days: 7 },
-    { label: 'Last 30 Days', days: 30 },
-    { label: 'This Month', type: 'month' as const },
-    { label: 'Last 3 Months', months: 3 },
-    { label: 'This Year', type: 'year' as const },
+    { labelKey: 'dashboard.quick_today', days: 0 },
+    { labelKey: 'dashboard.quick_last_7_days', days: 7 },
+    { labelKey: 'dashboard.quick_last_30_days', days: 30 },
+    { labelKey: 'dashboard.quick_this_month', type: 'month' as const },
+    { labelKey: 'dashboard.quick_last_3_months', months: 3 },
+    { labelKey: 'dashboard.quick_this_year', type: 'year' as const },
 ];
 
 // Memoized Revenue Chart component
@@ -85,6 +86,7 @@ interface RevenueSummaryProps {
 }
 
 const RevenueSummary = memo(function RevenueSummary({ data }: RevenueSummaryProps) {
+    const { t } = useTranslation();
     const summary = useMemo(() => {
         if (!data || data.length === 0) return { total: 0, average: 0, count: 0 };
         const total = data.reduce((sum, item) => sum + item.revenue, 0);
@@ -102,7 +104,7 @@ const RevenueSummary = memo(function RevenueSummary({ data }: RevenueSummaryProp
                     <div className="w-8 h-8 rounded-lg bg-primary-500/10 flex items-center justify-center">
                         <DollarSign className="w-4 h-4 text-primary-600" />
                     </div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Total Revenue</span>
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('dashboard.total_revenue')}</span>
                 </div>
                 <p className="text-xl font-bold text-gray-900 dark:text-white">${summary.total.toLocaleString()}</p>
             </div>
@@ -111,7 +113,7 @@ const RevenueSummary = memo(function RevenueSummary({ data }: RevenueSummaryProp
                     <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                         <BarChart3 className="w-4 h-4 text-emerald-600" />
                     </div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Average</span>
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('dashboard.average')}</span>
                 </div>
                 <p className="text-xl font-bold text-gray-900 dark:text-white">${summary.average.toLocaleString()}</p>
             </div>
@@ -120,7 +122,7 @@ const RevenueSummary = memo(function RevenueSummary({ data }: RevenueSummaryProp
                     <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
                         <CalendarRange className="w-4 h-4 text-violet-600" />
                     </div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Periods</span>
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('dashboard.periods')}</span>
                 </div>
                 <p className="text-xl font-bold text-gray-900 dark:text-white">{summary.count}</p>
             </div>
@@ -159,11 +161,11 @@ const RevenueFilter = memo(function RevenueFilter({
             <div className="flex flex-wrap gap-1.5">
                 {QUICK_FILTERS.slice(0, 4).map((filter) => (
                     <button
-                        key={filter.label}
+                        key={filter.labelKey}
                         onClick={() => onQuickFilter(filter)}
                         className="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
                     >
-                        {filter.label}
+                        {t(filter.labelKey)}
                     </button>
                 ))}
             </div>
@@ -192,7 +194,7 @@ const RevenueFilter = memo(function RevenueFilter({
                         onClick={onApply}
                         disabled={!canApply}
                         className="btn-primary py-1.5 px-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Apply Filter"
+                        title={t('dashboard.filter_apply')}
                     >
                         <Filter className="w-4 h-4" />
                     </button>
@@ -200,7 +202,7 @@ const RevenueFilter = memo(function RevenueFilter({
                         <button
                             onClick={onClear}
                             className="btn-secondary py-1.5 px-3 text-sm"
-                            title="Clear Filter"
+                            title={t('dashboard.filter_clear')}
                         >
                             <X className="w-4 h-4" />
                         </button>
@@ -226,6 +228,7 @@ interface AppointmentStatusSummaryProps {
 }
 
 const AppointmentStatusSummary = memo(function AppointmentStatusSummary({ data }: AppointmentStatusSummaryProps) {
+    const { t } = useTranslation();
     const total = useMemo(() => data.reduce((sum, item) => sum + item.value, 0), [data]);
     const completed = useMemo(() => data.find(d => d.name.toLowerCase().includes('completed'))?.value || 0, [data]);
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -237,7 +240,7 @@ const AppointmentStatusSummary = memo(function AppointmentStatusSummary({ data }
                     <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center">
                         <PieChartIcon className="w-3.5 h-3.5 text-blue-600" />
                     </div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Total</span>
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('dashboard.total')}</span>
                 </div>
                 <p className="text-lg font-bold text-gray-900 dark:text-white">{total}</p>
             </div>
@@ -246,7 +249,7 @@ const AppointmentStatusSummary = memo(function AppointmentStatusSummary({ data }
                     <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                     </div>
-                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Completion</span>
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t('dashboard.completion')}</span>
                 </div>
                 <p className="text-lg font-bold text-gray-900 dark:text-white">{completionRate}%</p>
             </div>
@@ -260,6 +263,7 @@ interface PatientGrowthSummaryProps {
 }
 
 const PatientGrowthSummary = memo(function PatientGrowthSummary({ data }: PatientGrowthSummaryProps) {
+    const { t } = useTranslation();
     const summary = useMemo(() => {
         if (!data || data.length === 0) return { total: 0, average: 0, thisMonth: 0 };
         const total = data.reduce((sum, item) => sum + item.newPatients, 0);
@@ -278,7 +282,7 @@ const PatientGrowthSummary = memo(function PatientGrowthSummary({ data }: Patien
                     <div className="w-6 h-6 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                         <UserPlus className="w-3 h-3 text-emerald-600" />
                     </div>
-                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">Total</span>
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">{t('dashboard.total')}</span>
                 </div>
                 <p className="text-base font-bold text-gray-900 dark:text-white">{summary.total}</p>
             </div>
@@ -287,7 +291,7 @@ const PatientGrowthSummary = memo(function PatientGrowthSummary({ data }: Patien
                     <div className="w-6 h-6 rounded-lg bg-sky-500/10 flex items-center justify-center">
                         <BarChart3 className="w-3 h-3 text-sky-600" />
                     </div>
-                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">Avg</span>
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">{t('dashboard.avg')}</span>
                 </div>
                 <p className="text-base font-bold text-gray-900 dark:text-white">{summary.average}</p>
             </div>
@@ -296,7 +300,7 @@ const PatientGrowthSummary = memo(function PatientGrowthSummary({ data }: Patien
                     <div className="w-6 h-6 rounded-lg bg-violet-500/10 flex items-center justify-center">
                         <Calendar className="w-3 h-3 text-violet-600" />
                     </div>
-                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">This Mo</span>
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">{t('dashboard.this_month')}</span>
                 </div>
                 <p className="text-base font-bold text-gray-900 dark:text-white">{summary.thisMonth}</p>
             </div>
@@ -324,9 +328,10 @@ interface ActivityItemProps {
 }
 
 const ActivityItem = memo(function ActivityItem({ activity }: ActivityItemProps) {
+    const { t, i18n } = useTranslation();
     const Icon = ACTIVITY_ICONS[activity.action] || FileEdit;
     const colorClass = ACTIVITY_COLORS[activity.action] || 'bg-gray-400';
-    const timeAgo = format(new Date(activity.createdAt), 'MMM d, h:mm a');
+    const timeAgo = format(new Date(activity.createdAt), 'MMM d, h:mm a', { locale: getDateLocale(i18n.language) });
 
     return (
         <div className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
@@ -338,7 +343,7 @@ const ActivityItem = memo(function ActivityItem({ activity }: ActivityItemProps)
                     <span className="font-semibold text-gray-900 dark:text-white">
                         {activity.user?.firstName} {activity.user?.lastName}
                     </span>
-                    <span className="text-gray-500"> {activity.action.toLowerCase()} </span>
+                    <span className="text-gray-500"> {t(`dashboard.activity_${String(activity.action).toLowerCase()}`, { defaultValue: String(activity.action).toLowerCase() })} </span>
                     <span className="font-medium">{activity.entity}</span>
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">{timeAgo}</p>
@@ -348,7 +353,7 @@ const ActivityItem = memo(function ActivityItem({ activity }: ActivityItemProps)
 });
 
 export default function DashboardPage() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { user } = useAuthStore();
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -482,8 +487,8 @@ export default function DashboardPage() {
                                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">{t('dashboard.revenue_overview')}</h3>
                                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                                         {dateFilterActive 
-                                            ? `${format(new Date(appliedStartDate), 'MMM d, yyyy')} - ${format(new Date(appliedEndDate), 'MMM d, yyyy')}`
-                                            : 'Last 12 months'
+                                            ? `${format(new Date(appliedStartDate), 'MMM d, yyyy', { locale: getDateLocale(i18n.language) })} - ${format(new Date(appliedEndDate), 'MMM d, yyyy', { locale: getDateLocale(i18n.language) })}`
+                                            : t('dashboard.last_12_months')
                                         }
                                     </p>
                                 </div>
@@ -509,7 +514,7 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between mb-4">
                         <div>
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('dashboard.appointment_status')}</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Current distribution</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{t('dashboard.current_distribution')}</p>
                         </div>
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center">
                             <PieChartIcon className="w-5 h-5 text-white" />
@@ -575,7 +580,7 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between mb-4">
                         <div>
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('dashboard.patient_growth')}</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">New patients per month</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{t('dashboard.new_patients_per_month')}</p>
                         </div>
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
                             <UserPlus className="w-5 h-5 text-white" />
@@ -605,7 +610,7 @@ export default function DashboardPage() {
                                     boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)',
                                     padding: '12px'
                                 }}
-                                formatter={(v: any) => [`${v} patients`, 'New Patients']}
+                                formatter={(v: any) => [t('dashboard.patients_count', { count: v }), t('dashboard.new_patients')]}
                             />
                             <Bar 
                                 dataKey="newPatients" 
@@ -628,7 +633,7 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between mb-4">
                         <div>
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('dashboard.recent_activity')}</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Latest system actions</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{t('dashboard.latest_system_actions')}</p>
                         </div>
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
                             <History className="w-5 h-5 text-white" />

@@ -7,16 +7,16 @@ import type { Notification } from '../../types';
 import { useNotificationsSocket } from '../../hooks/useNotificationsSocket';
 
 const NOTIFICATION_TYPES = [
-    { value: 'ALL', label: 'All' },
-    { value: 'APPOINTMENT_REMINDER', label: 'Appointments' },
-    { value: 'PAYMENT_DUE', label: 'Payments' },
-    { value: 'TREATMENT_UPDATE', label: 'Treatments' },
-    { value: 'SYSTEM', label: 'System' },
-    { value: 'GENERAL', label: 'General' },
+    { value: 'ALL', labelKey: 'notifications.type_all' },
+    { value: 'APPOINTMENT_REMINDER', labelKey: 'notifications.type_appointments' },
+    { value: 'PAYMENT_DUE', labelKey: 'notifications.type_payments' },
+    { value: 'TREATMENT_UPDATE', labelKey: 'notifications.type_treatments' },
+    { value: 'SYSTEM', labelKey: 'notifications.type_system' },
+    { value: 'GENERAL', labelKey: 'notifications.type_general' },
 ];
 
 export default function NotificationsPage() {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const queryClient = useQueryClient();
     const { markAsRead: socketMarkAsRead } = useNotificationsSocket();
     const [filter, setFilter] = useState('ALL');
@@ -72,14 +72,14 @@ export default function NotificationsPage() {
         const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
         if (diffInHours < 1) {
-            return 'Just now';
+            return t('common.just_now');
         } else if (diffInHours < 24) {
-            return `${Math.floor(diffInHours)} hours ago`;
+            return t('common.hours_ago', { count: Math.floor(diffInHours) });
         } else if (diffInHours < 48) {
-            return 'Yesterday';
+            return t('common.yesterday');
         } else {
-            return date.toLocaleDateString('en-US', { 
-                month: 'short', 
+            return date.toLocaleDateString(i18n.language, {
+                month: 'short',
                 day: 'numeric',
                 year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
             });
@@ -100,15 +100,15 @@ export default function NotificationsPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent">
-                        Notifications
+                        {t('notifications.title')}
                     </h1>
                     <p className="text-gray-500 text-sm mt-1">
                         {unreadCount ? (
                             <span className="inline-flex items-center gap-2">
                                 <span className="w-2 h-2 bg-primary-500 rounded-full animate-pulse" />
-                                <span className="font-medium text-primary-600">{unreadCount} unread</span>
+                                <span className="font-medium text-primary-600">{t('notifications.unread', { count: unreadCount })}</span>
                             </span>
-                        ) : 'No new notifications'}
+                        ) : t('notifications.no_new')}
                     </p>
                 </div>
                 {unreadNotifications.length > 0 && (
@@ -118,7 +118,7 @@ export default function NotificationsPage() {
                         className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white font-medium rounded-xl shadow-lg shadow-primary-500/25 hover:shadow-xl hover:shadow-primary-500/40 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Check className="w-4 h-4" />
-                        Mark all as read
+                        {t('notifications.mark_all_read')}
                     </button>
                 )}
             </div>
@@ -128,7 +128,7 @@ export default function NotificationsPage() {
                 <div className="flex flex-wrap items-center gap-4 p-1">
                     <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-primary-50 to-primary-100/50 dark:from-primary-900/20 dark:to-primary-900/10 rounded-xl">
                         <Filter className="w-4 h-4 text-primary-500" />
-                        <span className="text-sm font-semibold text-primary-700 dark:text-primary-400">Filter</span>
+                        <span className="text-sm font-semibold text-primary-700 dark:text-primary-400">{t('notifications.filter')}</span>
                     </div>
                     
                     <div className="flex flex-wrap gap-2">
@@ -142,7 +142,7 @@ export default function NotificationsPage() {
                                         : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:-translate-y-0.5'
                                 }`}
                             >
-                                {type.label}
+                                {t(type.labelKey)}
                             </button>
                         ))}
                     </div>
@@ -152,7 +152,7 @@ export default function NotificationsPage() {
                             <div className={`relative w-11 h-6 rounded-full transition-colors duration-300 ${showUnreadOnly ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
                                 <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${showUnreadOnly ? 'translate-x-5' : 'translate-x-0.5'}`} />
                             </div>
-                            <span className="font-medium">Unread only</span>
+                            <span className="font-medium">{t('notifications.unread_only')}</span>
                         </label>
                         <input
                             type="checkbox"
@@ -183,14 +183,14 @@ export default function NotificationsPage() {
                             <Bell className="w-12 h-12 text-primary-400" />
                         </div>
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                            No notifications
+                            {t('notifications.empty_title')}
                         </h3>
                         <p className="text-gray-500 max-w-md mx-auto">
-                            {showUnreadOnly 
-                                ? "You've read all your notifications!" 
-                                : filter !== 'ALL' 
-                                    ? `No ${filter.toLowerCase().replace('_', ' ')} notifications found.`
-                                    : "You don't have any notifications yet."}
+                            {showUnreadOnly
+                                ? t('notifications.empty_all_read')
+                                : filter !== 'ALL'
+                                    ? t('notifications.empty_filtered')
+                                    : t('notifications.empty_none')}
                         </p>
                     </div>
                 ) : (
@@ -245,7 +245,7 @@ export default function NotificationsPage() {
                                                     e.stopPropagation();
                                                 }}
                                                 className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 opacity-0 group-hover:opacity-100 hover:shadow-md"
-                                                title="Dismiss"
+                                                title={t('notifications.dismiss')}
                                             >
                                                 <X className="w-4 h-4" />
                                             </button>

@@ -62,23 +62,23 @@ export default function DocumentsTab({ patientId }: DocumentsTabProps) {
 
     const uploadMutation = useMutation({
         mutationFn: () => {
-            if (!uploadData.file) throw new Error(t('documents.error_no_file') || 'No file selected');
+            if (!uploadData.file) throw new Error(t('documents.error_no_file'));
             return documentsApi.upload(patientId, uploadData.file, uploadData.type, uploadData.description);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['documents', patientId] });
-            toast.success(t('documents.upload_success') || 'Document uploaded!');
+            toast.success(t('documents.upload_success'));
             setShowUpload(false);
             setUploadData({ file: null, type: 'OTHER', description: '' });
         },
-        onError: () => toast.error(t('documents.upload_error') || 'Upload failed'),
+        onError: () => toast.error(t('documents.upload_error')),
     });
 
     const deleteMutation = useMutation({
         mutationFn: documentsApi.delete,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['documents', patientId] });
-            toast.success(t('documents.delete_success') || 'Document deleted');
+            toast.success(t('documents.delete_success'));
         },
     });
 
@@ -95,7 +95,7 @@ export default function DocumentsTab({ patientId }: DocumentsTabProps) {
             URL.revokeObjectURL(url);
         } catch (error) {
             console.error('Error downloading file:', error);
-            toast.error(t('documents.download_error') || 'Download failed');
+            toast.error(t('documents.download_error'));
         }
     };
 
@@ -227,7 +227,7 @@ export default function DocumentsTab({ patientId }: DocumentsTabProps) {
                         <FolderOpen className="w-10 h-10 text-primary-300 dark:text-primary-600" />
                     </div>
                     <p className="text-gray-500 font-medium text-lg">{t('documents.no_documents')}</p>
-                    <p className="text-sm text-gray-400 mt-2">{t('documents.upload_hint') || 'Upload your first document to get started'}</p>
+                    <p className="text-sm text-gray-400 mt-2">{t('documents.upload_hint')}</p>
                 </div>
             )}
             

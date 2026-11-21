@@ -40,7 +40,7 @@ export default function PrescriptionsPage() {
         mutationFn: prescriptionsApi.create,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['prescriptions'] });
-            toast.success(t('prescriptions.create_success') || 'Prescription created successfully');
+            toast.success(t('prescriptions.create_success'));
             resetForm();
         },
         onError: (err: any) => toast.error(getErrorMessage(err, t('prescriptions.create_error'))),
@@ -50,7 +50,7 @@ export default function PrescriptionsPage() {
         mutationFn: ({ id, data }: { id: string; data: any }) => prescriptionsApi.update(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['prescriptions'] });
-            toast.success(t('prescriptions.update_success') || 'Prescription updated successfully');
+            toast.success(t('prescriptions.update_success'));
             resetForm();
         },
         onError: (err: any) => toast.error(getErrorMessage(err, t('prescriptions.update_error'))),
@@ -60,7 +60,7 @@ export default function PrescriptionsPage() {
         mutationFn: prescriptionsApi.delete,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['prescriptions'] });
-            toast.success(t('prescriptions.delete_success') || 'Prescription deleted successfully');
+            toast.success(t('prescriptions.delete_success'));
         },
         onError: (err: any) => toast.error(getErrorMessage(err, t('prescriptions.delete_error'))),
     });
@@ -127,15 +127,15 @@ export default function PrescriptionsPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold bg-gradient-to-r from-dental-teal to-dental-sky bg-clip-text text-transparent">
-                        {t('prescriptions.title') || 'Prescriptions'}
+                        {t('prescriptions.title')}
                     </h1>
                     <p className="text-gray-500 text-sm mt-1">
-                        {t('prescriptions.total_count', { count: filteredPrescriptions?.length || 0 }) || `${filteredPrescriptions?.length || 0} prescriptions`}
+                        {t('prescriptions.total_count', { count: filteredPrescriptions?.length || 0 })}
                     </p>
                 </div>
                 {['ADMIN', 'DENTIST'].includes(user?.role as string) && (
                     <button onClick={() => setShowForm(!showForm)} className="btn-primary shadow-lg shadow-dental-teal/30 hover:shadow-xl hover:shadow-dental-teal/40 transition-all duration-300">
-                        <Plus className="w-4 h-4" /> {editingId ? t('prescriptions.cancel_edit') || 'Cancel Edit' : t('prescriptions.add') || 'Add Prescription'}
+                        <Plus className="w-4 h-4" /> {editingId ? t('prescriptions.cancel_edit') : t('prescriptions.add')}
                     </button>
                 )}
             </div>
@@ -145,7 +145,7 @@ export default function PrescriptionsPage() {
                 <div className="card animate-slide-up border-l-4 border-l-dental-teal relative overflow-hidden">
                     <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-dental-teal via-dental-sky to-dental-teal opacity-50" />
                     <h3 className="font-bold text-xl text-gray-900 dark:text-white mb-6">
-                        {editingId ? t('prescriptions.edit_title') || 'Edit Prescription' : t('prescriptions.new_title') || 'New Prescription'}
+                        {editingId ? t('prescriptions.edit_title') : t('prescriptions.new_title')}
                     </h3>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -160,7 +160,7 @@ export default function PrescriptionsPage() {
                                     required
                                     disabled={!!editingId}
                                 >
-                                    <option value="">{t('prescriptions.select_patient') || 'Select a patient'}</option>
+                                    <option value="">{t('prescriptions.select_patient')}</option>
                                     {patients?.data.map((patient: Patient) => (
                                         <option key={patient.id} value={patient.id}>
                                             {patient.firstName} {patient.lastName}
@@ -186,7 +186,7 @@ export default function PrescriptionsPage() {
                                     className="input-field bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 focus:ring-2 focus:ring-dental-teal/50 transition-all duration-200"
                                     value={formData.medication}
                                     onChange={(e) => setFormData({ ...formData, medication: e.target.value })}
-                                    placeholder="e.g., Amoxicillin"
+                                    placeholder={t('prescriptions.medication_placeholder')}
                                     required
                                 />
                             </div>
@@ -198,7 +198,7 @@ export default function PrescriptionsPage() {
                                     className="input-field bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 focus:ring-2 focus:ring-dental-teal/50 transition-all duration-200"
                                     value={formData.dosage}
                                     onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
-                                    placeholder="e.g., 500mg"
+                                    placeholder={t('prescriptions.dosage_placeholder')}
                                     required
                                 />
                             </div>
@@ -210,7 +210,7 @@ export default function PrescriptionsPage() {
                                     className="input-field bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 focus:ring-2 focus:ring-dental-teal/50 transition-all duration-200"
                                     value={formData.frequency}
                                     onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
-                                    placeholder="e.g., 3 times daily"
+                                    placeholder={t('prescriptions.frequency_placeholder')}
                                     required
                                 />
                             </div>
@@ -222,7 +222,7 @@ export default function PrescriptionsPage() {
                                     className="input-field bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 focus:ring-2 focus:ring-dental-teal/50 transition-all duration-200"
                                     value={formData.duration}
                                     onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                                    placeholder="e.g., 7 days"
+                                    placeholder={t('prescriptions.duration_placeholder')}
                                     required
                                 />
                             </div>
@@ -233,7 +233,7 @@ export default function PrescriptionsPage() {
                                     rows={3}
                                     value={formData.notes}
                                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                    placeholder={t('prescriptions.notes_placeholder') || 'Additional instructions...'}
+                                    placeholder={t('prescriptions.notes_placeholder')}
                                 />
                             </div>
                         </div>
@@ -262,7 +262,7 @@ export default function PrescriptionsPage() {
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                     type="text"
-                    placeholder={t('prescriptions.search_placeholder') || 'Search prescriptions or patients...'}
+                    placeholder={t('prescriptions.search_placeholder')}
                     className="input-field pl-10 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 focus:ring-2 focus:ring-dental-teal/30 transition-all duration-200 shadow-sm"
                     value={search}
                     onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -274,7 +274,7 @@ export default function PrescriptionsPage() {
                 <div className="card text-center py-16 text-gray-400">
                     <div className="animate-pulse flex flex-col items-center">
                         <FileText className="w-12 h-12 mb-4 opacity-30" />
-                        {t('prescriptions.loading') || 'Loading prescriptions...'}
+                        {t('prescriptions.loading')}
                     </div>
                 </div>
             ) : (
@@ -329,18 +329,18 @@ export default function PrescriptionsPage() {
                                         <button
                                             onClick={() => handleEdit(prescription)}
                                             className="p-2.5 text-gray-500 hover:text-dental-teal hover:bg-dental-teal/10 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
-                                            title="Edit"
+                                            title={t('common.edit')}
                                         >
                                             <Edit className="w-4 h-4" />
                                         </button>
                                         <button
                                             onClick={() => {
-                                                if (confirm(t('prescriptions.confirm_delete') || 'Are you sure you want to delete this prescription?')) {
+                                                if (confirm(t('prescriptions.confirm_delete'))) {
                                                     deleteMutation.mutate(prescription.id);
                                                 }
                                             }}
                                             className="p-2.5 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
-                                            title="Delete"
+                                            title={t('common.delete')}
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </button>
@@ -354,7 +354,7 @@ export default function PrescriptionsPage() {
                             <div className="w-20 h-20 bg-gradient-to-br from-dental-teal/20 to-dental-sky/20 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <FileText className="w-10 h-10 text-dental-teal/50" />
                             </div>
-                            <p className="text-lg font-medium text-gray-600 dark:text-gray-400">{t('prescriptions.no_prescriptions') || 'No prescriptions found'}</p>
+                            <p className="text-lg font-medium text-gray-600 dark:text-gray-400">{t('prescriptions.no_prescriptions')}</p>
                         </div>
                     )}
                 </div>
@@ -364,8 +364,7 @@ export default function PrescriptionsPage() {
             {totalPages > 1 && (
                 <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl shadow-sm">
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {t('common.pagination_info', { page, totalPages, total: filteredPrescriptions?.length }) ||
-                            `Page ${page} of ${totalPages} (${filteredPrescriptions?.length} total)`}
+                        {t('common.pagination_info', { page, totalPages, total: filteredPrescriptions?.length })}
                     </p>
                     <div className="flex gap-2">
                         <button

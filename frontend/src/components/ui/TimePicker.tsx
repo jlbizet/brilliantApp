@@ -3,6 +3,7 @@ import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react';
 import { Clock } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { useTranslation } from 'react-i18next';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -16,7 +17,8 @@ interface TimePickerProps {
     minuteStep?: number;
 }
 
-export function TimePicker({ value, onChange, placeholder = 'Select time', className, minuteStep = 15 }: TimePickerProps) {
+export function TimePicker({ value, onChange, placeholder, className, minuteStep = 15 }: TimePickerProps) {
+    const { t } = useTranslation();
     const [isAm, setIsAm] = useState(() => {
         if (!value) return true;
         const hour = parseInt(value.split(':')[0]);
@@ -44,7 +46,7 @@ export function TimePicker({ value, onChange, placeholder = 'Select time', class
     };
 
     const formatDisplay = (time: string) => {
-        if (!time) return placeholder;
+        if (!time) return placeholder ?? t('common.select_time');
         const [h, m] = time.split(':').map(Number);
         const ampm = h >= 12 ? 'PM' : 'AM';
         const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
@@ -112,7 +114,7 @@ export function TimePicker({ value, onChange, placeholder = 'Select time', class
                     <div className="flex gap-4">
                         {/* Hours */}
                         <div className="flex-1">
-                            <label className="text-xs font-medium text-gray-500 mb-2 block">Hour</label>
+                            <label className="text-xs font-medium text-gray-500 mb-2 block">{t('common.hour')}</label>
                             <div className="h-48 overflow-y-auto space-y-1">
                                 {hours.map(hour => (
                                     <button
@@ -134,7 +136,7 @@ export function TimePicker({ value, onChange, placeholder = 'Select time', class
 
                         {/* Minutes */}
                         <div className="flex-1">
-                            <label className="text-xs font-medium text-gray-500 mb-2 block">Minute</label>
+                            <label className="text-xs font-medium text-gray-500 mb-2 block">{t('common.minute')}</label>
                             <div className="h-48 overflow-y-auto space-y-1">
                                 {minutes.map(minute => (
                                     <button
@@ -163,7 +165,7 @@ export function TimePicker({ value, onChange, placeholder = 'Select time', class
                                 onClick={() => onChange('')}
                                 className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                             >
-                                Clear
+                                {t('common.clear')}
                             </button>
                             <button
                                 type="button"
@@ -177,7 +179,7 @@ export function TimePicker({ value, onChange, placeholder = 'Select time', class
                                 }}
                                 className="text-xs text-primary-600 hover:text-primary-700 font-medium"
                             >
-                                Now
+                                {t('common.now')}
                             </button>
                         </div>
                     </div>

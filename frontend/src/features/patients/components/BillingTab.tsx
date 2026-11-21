@@ -61,9 +61,9 @@ export default function BillingTab({ patientId }: BillingTabProps) {
         mutationFn: ({ id, status }: { id: string; status: string }) => billingApi.updateStatus(id, status),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['invoices'] });
-            toast.success(t('billing.status_updated') || 'Status updated');
+            toast.success(t('billing.status_updated'));
         },
-        onError: () => toast.error(t('billing.status_update_error') || 'Failed to update status'),
+        onError: () => toast.error(t('billing.status_update_error')),
     });
 
     const invoices = invoicesResponse?.data;
@@ -229,7 +229,7 @@ export default function BillingTab({ patientId }: BillingTabProps) {
                                                                 </Transition>
                                                             </Menu>
                                                         )}
-                                                        <button className="p-2 text-gray-400 hover:text-primary-600 transition-colors rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700" title={t('billing.download_pdf') || 'Download PDF'}>
+                                                        <button className="p-2 text-gray-400 hover:text-primary-600 transition-colors rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700" title={t('billing.download_pdf')}>
                                                             <Download className="w-4 h-4" />
                                                         </button>
                                                     </div>

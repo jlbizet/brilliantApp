@@ -25,7 +25,7 @@ export default function ClinicalHistoryTab({ patient }: ClinicalHistoryTabProps)
         mutationFn: (data: any) => patientsApi.addMedicalHistory(patient.id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['patient', patient.id] });
-            toast.success(t('patients.medical_history_success') || 'Medical history updated');
+            toast.success(t('patients.medical_history_success'));
             setShowConditionForm(false);
             setConditionData({ condition: '', description: '', isOngoing: true });
         },
@@ -35,7 +35,7 @@ export default function ClinicalHistoryTab({ patient }: ClinicalHistoryTabProps)
         mutationFn: (data: any) => patientsApi.addAllergy(patient.id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['patient', patient.id] });
-            toast.success(t('patients.allergy_success') || 'Allergy added');
+            toast.success(t('patients.allergy_success'));
             setShowAllergyForm(false);
             setAllergyData({ allergen: '', severity: 'moderate', reaction: '' });
         },

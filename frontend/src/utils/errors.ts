@@ -1,8 +1,11 @@
+import i18n from '../i18n';
+
 export function getErrorMessage(error: any, fallback?: string): string {
     const response = error?.response?.data;
-    
+    const defaultMessage = i18n.t('errors.unexpected');
+
     if (!response) {
-        return fallback || 'An unexpected error occurred';
+        return fallback || defaultMessage;
     }
 
     if (response.errors && typeof response.errors === 'object') {
@@ -21,5 +24,5 @@ export function getErrorMessage(error: any, fallback?: string): string {
         }
     }
 
-    return fallback || 'An unexpected error occurred';
+    return fallback || defaultMessage;
 }

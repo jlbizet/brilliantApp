@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import Tooth, { Surface, ConditionType } from './Tooth';
 
 interface OdontogramGridProps {
@@ -32,6 +33,7 @@ const getConditionsForTooth = (toothId: number, allConditions: any[]) => {
 };
 
 const OdontogramGrid: React.FC<OdontogramGridProps> = ({ conditions, onToothClick, isChild = false }) => {
+    const { t } = useTranslation();
     const quadrants = isChild ? CHILD_TEETH : ADULT_TEETH;
 
     const renderQuadrant = (teeth: number[]) => {
@@ -53,8 +55,8 @@ const OdontogramGrid: React.FC<OdontogramGridProps> = ({ conditions, onToothClic
         <div className="flex flex-col gap-8 select-none">
             {/* Upper Jaw */}
             <div className="flex gap-4 min-[400px]:gap-10 justify-center items-end border-b-2 border-slate-200 pb-8 relative">
-                <span className="absolute -left-6 top-1/2 -translate-y-1/2 -rotate-90 text-[10px] font-bold text-gray-400">RIGHT</span>
-                <span className="absolute -right-6 top-1/2 -translate-y-1/2 rotate-90 text-[10px] font-bold text-gray-400">LEFT</span>
+                <span className="absolute -left-6 top-1/2 -translate-y-1/2 -rotate-90 text-[10px] font-bold text-gray-400">{t('odontogram.right')}</span>
+                <span className="absolute -right-6 top-1/2 -translate-y-1/2 rotate-90 text-[10px] font-bold text-gray-400">{t('odontogram.left')}</span>
 
                 {renderQuadrant(quadrants[0])} {/* Q1 / Q5 */}
                 {renderQuadrant(quadrants[1])} {/* Q2 / Q6 */}

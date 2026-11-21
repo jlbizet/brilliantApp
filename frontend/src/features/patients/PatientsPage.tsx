@@ -29,7 +29,7 @@ export default function PatientsPage() {
         mutationFn: patientsApi.create,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['patients'] });
-            toast.success(t('patients.create_success') || 'Patient created successfully');
+            toast.success(t('patients.create_success'));
             setShowForm(false);
             setFormData({ firstName: '', lastName: '', email: '', phone: '', dateOfBirth: '', gender: 'PREFER_NOT_TO_SAY' });
             setFieldErrors({});
@@ -49,13 +49,13 @@ export default function PatientsPage() {
         mutationFn: patientsApi.delete,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['patients'] });
-            toast.success(t('patients.delete_success') || 'Patient deactivated successfully');
+            toast.success(t('patients.delete_success'));
         },
-        onError: (err: any) => toast.error(t('patients.delete_error') || 'Failed to deactivate patient'),
+        onError: (err: any) => toast.error(t('patients.delete_error')),
     });
 
     const handleDelete = (id: string, name: string) => {
-        if (window.confirm(t('patients.delete_confirm', { name }) || `Are you sure you want to delete ${name}?`)) {
+        if (window.confirm(t('patients.delete_confirm', { name }))) {
             deleteMutation.mutate(id);
         }
     };

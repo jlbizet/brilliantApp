@@ -61,29 +61,29 @@ export default function TreatmentsTab({ patientId }: TreatmentsTabProps) {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['patient-treatments', patientId] });
             queryClient.invalidateQueries({ queryKey: ['patient', patientId] });
-            toast.success(t('treatments.plan_create_success') || 'Treatment plan created');
+            toast.success(t('treatments.plan_create_success'));
             setShowForm(false);
             setFormData({ name: '', description: '', estimatedCost: '', status: 'PLANNED' });
         },
-        onError: () => toast.error(t('treatments.plan_create_error') || 'Failed to create plan'),
+        onError: () => toast.error(t('treatments.plan_create_error')),
     });
 
     const createTreatmentMutation = useMutation({
         mutationFn: (data: any) => treatmentsApi.createTreatment(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['patient-treatments', patientId] });
-            toast.success(t('treatments.procedure_add_success') || 'Procedure added');
+            toast.success(t('treatments.procedure_add_success'));
             setAddingProcedureTo(null);
             setProcedureData({ name: '', cost: '', tooth: '' });
         },
-        onError: () => toast.error(t('treatments.procedure_add_error') || 'Failed to add procedure'),
+        onError: () => toast.error(t('treatments.procedure_add_error')),
     });
 
     const updateTreatmentMutation = useMutation({
         mutationFn: ({ id, status }: { id: string; status: string }) => treatmentsApi.updateTreatment(id, { status }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['patient-treatments', patientId] });
-            toast.success(t('treatments.procedure_update_success') || 'Procedure status updated');
+            toast.success(t('treatments.procedure_update_success'));
         },
     });
 
@@ -91,7 +91,7 @@ export default function TreatmentsTab({ patientId }: TreatmentsTabProps) {
         mutationFn: ({ id, status }: { id: string; status: string }) => treatmentsApi.updatePlan(id, { status }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['patient-treatments', patientId] });
-            toast.success(t('treatments.plan_update_success') || 'Plan status updated');
+            toast.success(t('treatments.plan_update_success'));
         },
     });
 

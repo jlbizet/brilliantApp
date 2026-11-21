@@ -123,10 +123,10 @@ export default function StaffForm({
                                             </div>
                                             <div>
                                                 <Dialog.Title as="h3" className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">
-                                                    {isEditMode ? t('staff.edit_title') || 'Edit Staff Member' : t('staff.add_title') || 'Add Staff Member'}
+                                                    {isEditMode ? t('staff.edit_title') : t('staff.add_title')}
                                                 </Dialog.Title>
                                                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                                    {isEditMode ? t('staff.edit_description') || 'Update staff member details' : t('staff.add_description') || 'Create a new staff account'}
+                                                    {isEditMode ? t('staff.edit_description') : t('staff.add_description')}
                                                 </p>
                                             </div>
                                         </div>
@@ -154,7 +154,7 @@ export default function StaffForm({
                                                 value={formData.firstName}
                                                 onChange={e => setFormData({ ...formData, firstName: e.target.value })}
                                                 className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-3 px-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                                                placeholder={t('staff.first_name_placeholder') || 'John'}
+                                                placeholder={t('staff.first_name_placeholder')}
                                             />
                                         </div>
 
@@ -170,7 +170,7 @@ export default function StaffForm({
                                                 value={formData.lastName}
                                                 onChange={e => setFormData({ ...formData, lastName: e.target.value })}
                                                 className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-3 px-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                                                placeholder={t('staff.last_name_placeholder') || 'Doe'}
+                                                placeholder={t('staff.last_name_placeholder')}
                                             />
                                         </div>
 
@@ -186,7 +186,7 @@ export default function StaffForm({
                                                 value={formData.email}
                                                 onChange={e => setFormData({ ...formData, email: e.target.value })}
                                                 className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-3 px-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                                                placeholder={t('staff.email_placeholder') || 'john.doe@clinic.com'}
+                                                placeholder={t('staff.email_placeholder')}
                                             />
                                         </div>
 
@@ -203,7 +203,7 @@ export default function StaffForm({
                                                     value={formData.password}
                                                     onChange={e => setFormData({ ...formData, password: e.target.value })}
                                                     className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-3 px-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                                                    placeholder={t('staff.password_placeholder') || '••••••••'}
+                                                    placeholder={t('staff.password_placeholder')}
                                                 />
                                             </div>
                                         )}
@@ -259,7 +259,7 @@ export default function StaffForm({
                                                 value={formData.phone}
                                                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
                                                 className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-3 px-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                                                placeholder={t('staff.phone_placeholder') || '+1 (555) 000-0000'}
+                                                placeholder={t('staff.phone_placeholder')}
                                             />
                                         </div>
 
@@ -274,7 +274,7 @@ export default function StaffForm({
                                                 value={formData.specialization}
                                                 onChange={e => setFormData({ ...formData, specialization: e.target.value })}
                                                 className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-3 px-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                                                placeholder={t('staff.specialization_placeholder') || 'e.g. Orthodontics'}
+                                                placeholder={t('staff.specialization_placeholder')}
                                             />
                                         </div>
 
@@ -289,7 +289,7 @@ export default function StaffForm({
                                                 value={formData.licenseNumber}
                                                 onChange={e => setFormData({ ...formData, licenseNumber: e.target.value })}
                                                 className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-3 px-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                                                placeholder={t('staff.license_number_placeholder') || 'License number...'}
+                                                placeholder={t('staff.license_number_placeholder')}
                                             />
                                         </div>
 
@@ -313,7 +313,7 @@ export default function StaffForm({
                                                 </div>
                                                 <div className="flex-1 text-left">
                                                     <p className="text-sm font-bold text-gray-900 dark:text-white">{t('staff.active')}</p>
-                                                    <p className="text-xs text-gray-500 dark:text-gray-400">{formData.isActive ? t('staff.active_description') || 'Account is active and can login' : t('staff.inactive_description') || 'Account is disabled'}</p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">{formData.isActive ? t('staff.active_description') : t('staff.inactive_description')}</p>
                                                 </div>
                                                 <div className={`w-12 h-6 rounded-full transition-colors relative ${formData.isActive ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
                                                     <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${formData.isActive ? 'left-7' : 'left-1'}`} />

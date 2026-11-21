@@ -162,7 +162,7 @@ export default function BillingPage() {
                                 <tr>
                                     <th className="text-left py-4 px-6 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('billing.invoice_number')}</th>
                                     <th className="text-left py-4 px-6 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('common.patient')}</th>
-                                    <th className="text-left py-4 px-6 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('common.total') || 'Total'}</th>
+                                    <th className="text-left py-4 px-6 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('common.total')}</th>
                                     <th className="text-left py-4 px-6 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('common.status')}</th>
                                     <th className="text-left py-4 px-6 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('billing.due_date')}</th>
                                     <th className="text-left py-4 px-6 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('billing.payments')}</th>
@@ -200,7 +200,7 @@ export default function BillingPage() {
                                             <td className="py-4 px-6 text-sm text-gray-500 dark:text-gray-400">{new Date(inv.dueDate).toLocaleDateString()}</td>
                                             <td className="py-4 px-6">
                                                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                    {(inv as any)._count?.payments || 0} {t('billing.payments_count', { count: (inv as any)._count?.payments || 0 })}
+                                                    {t('billing.payments_count', { count: (inv as any)._count?.payments || 0 })}
                                                 </span>
                                             </td>
                                         </tr>

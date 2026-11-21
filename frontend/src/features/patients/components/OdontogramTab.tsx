@@ -38,9 +38,9 @@ export default function OdontogramTab({ patientId }: OdontogramTabProps) {
         mutationFn: (data: any) => odontogramApi.addCondition(patientId, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['odontogram', patientId] });
-            toast.success(t('odontogram.update_success') || 'Condition updated');
+            toast.success(t('odontogram.update_success'));
         },
-        onError: () => toast.error(t('odontogram.update_error') || 'Failed to update condition'),
+        onError: () => toast.error(t('odontogram.update_error')),
     });
 
     const handleToothClick = (toothId: string, surface: Surface) => {

@@ -4,6 +4,8 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-reac
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { useTranslation } from 'react-i18next';
+import { getDateLocale } from '../../utils/dateLocale';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -18,7 +20,9 @@ interface DatePickerProps {
     max?: string;
 }
 
-export function DatePicker({ value, onChange, placeholder = 'Select date', className, min, max }: DatePickerProps) {
+export function DatePicker({ value, onChange, placeholder, className, min, max }: DatePickerProps) {
+    const { t, i18n } = useTranslation();
+    const locale = getDateLocale(i18n.language);
     // Helper to parse date string without timezone shift
     const parseDate = (dateStr: string) => {
         if (!dateStr) return null;
@@ -35,7 +39,7 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', class
     const calendarEnd = endOfWeek(monthEnd);
     const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
-    const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+    const weekDays = days.slice(0, 7).map(day => format(day, 'EEEEE', { locale }));
 
     const handleSelect = (date: Date) => {
         const formatted = format(date, 'yyyy-MM-dd');
@@ -57,7 +61,7 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', class
                     className
                 )}
             >
-                <span>{value && selectedDate ? format(selectedDate, 'MMM d, yyyy') : placeholder}</span>
+                <span>{value && selectedDate ? format(selectedDate, 'MMM d, yyyy', { locale }) : placeholder ?? t('common.select_date')}</span>
                 <CalendarIcon className="w-4 h-4 text-gray-400" />
             </PopoverButton>
 
@@ -81,7 +85,7 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', class
                             <ChevronLeft className="w-4 h-4" />
                         </button>
                         <span className="font-semibold text-sm">
-                            {format(currentMonth, 'MMMM yyyy')}
+                            {format(currentMonth, 'MMMM yyyy', { locale })}
                         </span>
                         <button
                             type="button"
@@ -138,14 +142,14 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', class
                             onClick={() => onChange('')}
                             className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                         >
-                            Clear
+                            {t('common.clear')}
                         </button>
                         <button
                             type="button"
                             onClick={() => handleSelect(new Date())}
                             className="text-xs text-primary-600 hover:text-primary-700 font-medium"
                         >
-                            Today
+                            {t('common.today')}
                         </button>
                     </div>
                 </div>

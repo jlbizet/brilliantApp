@@ -74,7 +74,7 @@ export default function InventoryForm({ item, onSubmit, onCancel, isLoading }: I
                             className="input-field w-full"
                             value={formData.name}
                             onChange={e => setFormData({ ...formData, name: e.target.value })}
-                            placeholder="e.g. Surgical Masks (Box)"
+                            placeholder={t('inventory.name_placeholder')}
                         />
                     </div>
 
@@ -87,7 +87,7 @@ export default function InventoryForm({ item, onSubmit, onCancel, isLoading }: I
                             className="input-field w-full"
                             value={formData.category}
                             onChange={e => setFormData({ ...formData, category: e.target.value })}
-                            placeholder="e.g. PPE"
+                            placeholder={t('inventory.category_placeholder')}
                         />
                     </div>
 
@@ -99,7 +99,7 @@ export default function InventoryForm({ item, onSubmit, onCancel, isLoading }: I
                             className="input-field w-full"
                             value={formData.supplier}
                             onChange={e => setFormData({ ...formData, supplier: e.target.value })}
-                            placeholder="e.g. MedSupply Co."
+                            placeholder={t('inventory.supplier_placeholder')}
                         />
                     </div>
 

@@ -40,11 +40,11 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
         mutationFn: (data: any) => billingApi.createInvoice(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['invoices'] });
-            toast.success(t('billing.create_success') || 'Invoice created successfully');
+            toast.success(t('billing.create_success'));
             onClose();
             resetForm();
         },
-        onError: () => toast.error(t('billing.create_error') || 'Failed to create invoice'),
+        onError: () => toast.error(t('billing.create_error')),
     });
 
     const resetForm = () => {
@@ -74,8 +74,8 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedPatientId) return toast.error(t('billing.select_patient_error') || 'Please select a patient');
-        if (items.length === 0) return toast.error(t('billing.empty_items_error') || 'Invoice must have items');
+        if (!selectedPatientId) return toast.error(t('billing.select_patient_error'));
+        if (items.length === 0) return toast.error(t('billing.empty_items_error'));
 
         createInvoiceMutation.mutate({
             patientId: selectedPatientId,
@@ -133,7 +133,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
                                             {t('billing.new_invoice')}
                                         </Dialog.Title>
                                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5">
-                                            {t('billing.create_invoice_description') || 'Create a new invoice and add treatment items'}
+                                            {t('billing.create_invoice_description')}
                                         </p>
                                     </div>
                                 </div>
@@ -150,7 +150,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
                                                         <input
                                                             type="text"
                                                             className="input-field pl-11 py-3 transition-all duration-200 focus:ring-2 focus:ring-primary-500/20"
-                                                            placeholder={t('billing.search_patient_placeholder') || 'Search for a patient...'}
+                                                            placeholder={t('billing.search_patient_placeholder')}
                                                             value={searchTerm}
                                                             onChange={(e) => setSearchTerm(e.target.value)}
                                                         />
@@ -179,7 +179,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
                                             )}
 
                                             <div className="space-y-2.5">
-                                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('billing.select_treatments') || 'Select Treatments'}</label>
+                                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('billing.select_treatments')}</label>
                                                 <div className="max-h-[300px] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-2xl p-4 space-y-3 bg-gradient-to-b from-gray-50/80 to-white dark:from-gray-800/50 dark:to-gray-900/30 shadow-inner">
                                                     {treatmentPlans?.map((plan: TreatmentPlan) => (
                                                         <div key={plan.id} className="space-y-2">
@@ -211,7 +211,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
                                                                 <Search className="w-5 h-5 text-gray-400" />
                                                             </div>
                                                             <p className="text-sm text-gray-400 dark:text-gray-500">
-                                                                {selectedPatientId ? t('billing.no_treatments') || 'No treatments found for this patient' : t('billing.select_patient_hint') || 'Search for a patient to see their treatments'}
+                                                                {selectedPatientId ? t('billing.no_treatments') : t('billing.select_patient_hint')}
                                                             </p>
                                                         </div>
                                                     )}
@@ -222,7 +222,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
                                         {/* Right Side: Invoice Items & Totals */}
                                         <div className="space-y-6">
                                             <div className="space-y-2.5">
-                                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('billing.invoice_items') || 'Invoice Items'}</label>
+                                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('billing.invoice_items')}</label>
                                                 <div className="space-y-3 min-h-[200px]">
                                                     {items.map((item, idx) => (
                                                         <div key={idx} className="flex gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow duration-200 group animate-slide-up">
@@ -234,7 +234,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
                                                                 />
                                                                 <div className="flex items-center gap-6">
                                                                     <div className="flex items-center gap-2">
-                                                                        <label className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">{t('billing.qty') || 'Qty'}</label>
+                                                                        <label className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">{t('billing.qty')}</label>
                                                                         <input
                                                                             type="number"
                                                                             min="1"
@@ -244,7 +244,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
                                                                         />
                                                                     </div>
                                                                     <div className="flex items-center gap-2">
-                                                                        <label className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">{t('billing.price') || 'Price'}</label>
+                                                                        <label className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">{t('billing.price')}</label>
                                                                         <input
                                                                             type="number"
                                                                             min="0"
@@ -270,7 +270,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
                                                             <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3">
                                                                 <Receipt className="w-5 h-5 text-gray-400" />
                                                             </div>
-                                                            <p className="text-sm text-gray-400 dark:text-gray-500">{t('billing.empty_items') || 'No items added yet'}</p>
+                                                            <p className="text-sm text-gray-400 dark:text-gray-500">{t('billing.empty_items')}</p>
                                                         </div>
                                                     )}
                                                 </div>
@@ -289,14 +289,14 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
                                                         />
                                                     </div>
                                                     <div className="space-y-1.5 text-right">
-                                                        <p className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">{t('billing.subtotal') || 'Subtotal'}</p>
+                                                        <p className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">{t('billing.subtotal')}</p>
                                                         <p className="text-xl font-bold text-gray-900 dark:text-white">${subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                                     </div>
                                                 </div>
 
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div className="space-y-1.5">
-                                                        <label className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">{t('billing.tax') || 'Tax'}</label>
+                                                        <label className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">{t('billing.tax')}</label>
                                                         <input
                                                             type="number"
                                                             min="0"
@@ -307,7 +307,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
                                                         />
                                                     </div>
                                                     <div className="space-y-1.5">
-                                                        <label className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400">{t('billing.discount') || 'Discount'}</label>
+                                                        <label className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400">{t('billing.discount')}</label>
                                                         <input
                                                             type="number"
                                                             min="0"
@@ -320,7 +320,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
                                                 </div>
 
                                                 <div className="pt-4 border-t border-primary-200/50 dark:border-primary-800/30 flex justify-between items-center">
-                                                    <span className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('billing.total') || 'Total Amount'}</span>
+                                                    <span className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('billing.total')}</span>
                                                     <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-500">${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                                 </div>
                                             </div>
@@ -331,7 +331,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
                                                     className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-3 px-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all resize-none min-h-[100px]"
                                                     value={notes}
                                                     onChange={(e) => setNotes(e.target.value)}
-                                                    placeholder={t('billing.notes_placeholder') || 'Add internal notes or payment instructions...'}
+                                                    placeholder={t('billing.notes_placeholder')}
                                                 />
                                             </div>
                                         </div>
@@ -350,7 +350,7 @@ export default function CreateInvoiceModal({ isOpen, onClose, patientId: initial
                                             disabled={createInvoiceMutation.isPending}
                                             className="px-8 py-3 rounded-xl bg-gradient-to-r from-primary-600 to-primary-500 text-white font-semibold text-sm shadow-lg shadow-primary-500/25 hover:shadow-xl hover:shadow-primary-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                                         >
-                                            {createInvoiceMutation.isPending ? t('common.saving') : t('billing.create_invoice') || 'Create Invoice'}
+                                            {createInvoiceMutation.isPending ? t('common.saving') : t('billing.create_invoice')}
                                         </button>
                                     </div>
                                 </form>

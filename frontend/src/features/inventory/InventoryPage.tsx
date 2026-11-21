@@ -32,10 +32,10 @@ export default function InventoryPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['inventory'] });
             queryClient.invalidateQueries({ queryKey: ['low-stock'] });
-            toast.success(t('inventory.create_success') || 'Item added!');
+            toast.success(t('inventory.create_success'));
             setShowForm(false);
         },
-        onError: () => toast.error(t('inventory.create_error') || 'Failed to add item'),
+        onError: () => toast.error(t('inventory.create_error')),
     });
 
     const updateMutation = useMutation({
@@ -43,10 +43,10 @@ export default function InventoryPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['inventory'] });
             queryClient.invalidateQueries({ queryKey: ['low-stock'] });
-            toast.success(t('inventory.update_success') || 'Item updated!');
+            toast.success(t('inventory.update_success'));
             setEditingItem(null);
         },
-        onError: () => toast.error(t('inventory.update_error') || 'Failed to update item'),
+        onError: () => toast.error(t('inventory.update_error')),
     });
 
     const deleteMutation = useMutation({
@@ -54,9 +54,9 @@ export default function InventoryPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['inventory'] });
             queryClient.invalidateQueries({ queryKey: ['low-stock'] });
-            toast.success(t('inventory.delete_success') || 'Item deleted!');
+            toast.success(t('inventory.delete_success'));
         },
-        onError: () => toast.error(t('inventory.delete_error') || 'Failed to delete item'),
+        onError: () => toast.error(t('inventory.delete_error')),
     });
 
     const handleDelete = (id: string) => {

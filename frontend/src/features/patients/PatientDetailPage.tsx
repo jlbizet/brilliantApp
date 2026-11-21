@@ -54,10 +54,10 @@ export default function PatientDetailPage() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['patient', id] });
-            toast.success(t('patients.update_success') || 'Patient profile updated');
+            toast.success(t('patients.update_success'));
             setIsEditing(false);
         },
-        onError: () => toast.error(t('patients.update_error') || 'Update failed'),
+        onError: () => toast.error(t('patients.update_error')),
     });
 
     if (isLoading) return <div className="card text-center py-12 text-gray-400 animate-pulse">{t('patients.loading_details')}</div>;
@@ -227,9 +227,9 @@ export default function PatientDetailPage() {
                                             <div className="space-y-1">
                                                 <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('patients.gender')}</label>
                                                 <select className="input-field rounded-xl" value={editData?.gender} onChange={e => setEditData({ ...editData, gender: e.target.value })}>
-                                                    <option value="MALE">Male</option>
-                                                    <option value="FEMALE">Female</option>
-                                                    <option value="OTHER">Other</option>
+                                                    <option value="MALE">{t('patients.gender_male')}</option>
+                                                    <option value="FEMALE">{t('patients.gender_female')}</option>
+                                                    <option value="OTHER">{t('patients.gender_other')}</option>
                                                 </select>
                                             </div>
                                             <div className="space-y-1">

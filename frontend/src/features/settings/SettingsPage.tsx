@@ -30,7 +30,7 @@ export default function SettingsPage() {
         onSuccess: (updatedUser) => {
             setUser({ ...user!, ...updatedUser });
             queryClient.invalidateQueries({ queryKey: ['user-profile'] });
-            toast.success(t('settings.update_success') || 'Profile updated successfully');
+            toast.success(t('settings.update_success'));
             setIsEditingProfile(false);
         },
         onError: (err: any) => toast.error(getErrorMessage(err, t('settings.update_error'))),
@@ -40,7 +40,7 @@ export default function SettingsPage() {
         mutationFn: (data: { currentPassword: string; newPassword: string }) =>
             usersApi.updatePassword(user!.id, data),
         onSuccess: () => {
-            toast.success(t('settings.password_success') || 'Password updated successfully');
+            toast.success(t('settings.password_success'));
             setShowPasswordModal(false);
             setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
         },
@@ -54,11 +54,11 @@ export default function SettingsPage() {
     const handlePasswordSave = (e: React.FormEvent) => {
         e.preventDefault();
         if (passwordData.newPassword !== passwordData.confirmPassword) {
-            toast.error(t('settings.passwords_dont_match') || 'Passwords do not match');
+            toast.error(t('settings.passwords_dont_match'));
             return;
         }
         if (passwordData.newPassword.length < 6) {
-            toast.error(t('settings.password_too_short') || 'Password must be at least 6 characters');
+            toast.error(t('settings.password_too_short'));
             return;
         }
         updatePasswordMutation.mutate({
@@ -99,7 +99,7 @@ export default function SettingsPage() {
                         <button
                             onClick={() => setIsEditingProfile(true)}
                             className="p-2.5 text-gray-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
-                            title="Edit Profile"
+                            title={t('common.edit_profile')}
                         >
                             <Edit className="w-4 h-4" />
                         </button>
@@ -108,7 +108,7 @@ export default function SettingsPage() {
                             <button
                                 onClick={handleCancelEdit}
                                 className="p-2.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
-                                title="Cancel"
+                                title={t('common.cancel')}
                             >
                                 <X className="w-4 h-4" />
                             </button>
@@ -116,7 +116,7 @@ export default function SettingsPage() {
                                 onClick={handleProfileSave}
                                 disabled={updateProfileMutation.isPending}
                                 className="p-2.5 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50"
-                                title="Save Changes"
+                                title={t('common.save_changes')}
                             >
                                 <Check className="w-4 h-4" />
                             </button>
@@ -317,7 +317,7 @@ export default function SettingsPage() {
                                     required
                                     minLength={6}
                                 />
-                                <p className="text-xs text-gray-500">Minimum 6 characters</p>
+                                <p className="text-xs text-gray-500">{t('settings.password_min_length')}</p>
                             </div>
                             <div className="space-y-2">
                                 <label className="label text-sm font-semibold text-gray-700 dark:text-gray-300">{t('settings.confirm_password')}</label>

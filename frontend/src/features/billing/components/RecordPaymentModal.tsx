@@ -187,7 +187,7 @@ export default function RecordPaymentModal({ isOpen, onClose, invoice }: RecordP
                                             value={reference}
                                             onChange={(e) => setReference(e.target.value)}
                                             className="w-full rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-3.5 px-4 text-sm text-gray-900 dark:text-white placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                                            placeholder={t('billing.payment_reference_placeholder') || 'Transaction reference...'}
+                                            placeholder={t('billing.payment_reference_placeholder')}
                                         />
                                     </div>
 

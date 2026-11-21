@@ -83,7 +83,7 @@ export default function AppointmentsPage() {
         mutationFn: appointmentsApi.create,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['calendar-appointments'] });
-            toast.success(t('appointments.create_success') || 'Appointment created!');
+            toast.success(t('appointments.create_success'));
             setShowForm(false);
             setFieldErrors({});
         },
@@ -124,11 +124,11 @@ export default function AppointmentsPage() {
         mutationFn: waitlistApi.create,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['waitlist'] });
-            toast.success(t('appointments.waitlist_success') || 'Added to waitlist!');
+            toast.success(t('appointments.waitlist_success'));
             setShowWaitlistForm(false);
             setWaitlistData({ patientId: '', priority: 0, preferredDays: '', preferredTime: '', notes: '' });
         },
-        onError: (err: any) => toast.error(t('appointments.waitlist_error') || 'Failed to add to waitlist'),
+        onError: (err: any) => toast.error(t('appointments.waitlist_error')),
     });
 
     const toggleDentist = (id: string) => {
@@ -357,12 +357,12 @@ export default function AppointmentsPage() {
                                         if (newStart && newEnd) {
                                             appointmentsApi.update(apt.id, { startTime: newStart, endTime: newEnd })
                                                 .then(() => {
-                                                    toast.success(t('appointments.move_success') || 'Appointment moved');
+                                                    toast.success(t('appointments.move_success'));
                                                     queryClient.invalidateQueries({ queryKey: ['calendar-appointments'] });
                                                 })
                                                 .catch(() => {
                                                     info.revert();
-                                                    toast.error(t('appointments.move_error') || 'Could not move appointment');
+                                                    toast.error(t('appointments.move_error'));
                                                 });
                                         }
                                     }}
@@ -372,12 +372,12 @@ export default function AppointmentsPage() {
                                         if (newEnd) {
                                             appointmentsApi.update(apt.id, { endTime: newEnd })
                                                 .then(() => {
-                                                    toast.success(t('appointments.resize_success') || 'Duration updated');
+                                                    toast.success(t('appointments.resize_success'));
                                                     queryClient.invalidateQueries({ queryKey: ['calendar-appointments'] });
                                                 })
                                                 .catch(() => {
                                                     info.revert();
-                                                    toast.error(t('appointments.update_error') || 'Could not update duration');
+                                                    toast.error(t('appointments.update_error'));
                                                 });
                                         }
                                     }}
@@ -454,7 +454,7 @@ export default function AppointmentsPage() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="label">{t('appointments.pref_days')}</label>
-                                        <input className="input-field" placeholder="e.g. Mon, Wed" value={waitlistData.preferredDays} onChange={e => setWaitlistData({ ...waitlistData, preferredDays: e.target.value })} />
+                                        <input className="input-field" placeholder={t('appointments.pref_days_placeholder')} value={waitlistData.preferredDays} onChange={e => setWaitlistData({ ...waitlistData, preferredDays: e.target.value })} />
                                     </div>
                                     <div>
                                         <label className="label">{t('appointments.pref_time')}</label>
@@ -493,26 +493,26 @@ export default function AppointmentsPage() {
                             queryClient.invalidateQueries({ queryKey: ['calendar-appointments'] });
                             setSelectedAppointment(null);
                         })
-                        .catch(() => toast.error(t('appointments.update_error') || 'Failed to update status'));
+                        .catch(() => toast.error(t('appointments.update_error')));
                 }}
                 onUpdate={(id, data) => {
                     appointmentsApi.update(id, data)
                         .then(() => {
-                            toast.success(t('appointments.update_success') || 'Appointment updated');
+                            toast.success(t('appointments.update_success'));
                             queryClient.invalidateQueries({ queryKey: ['calendar-appointments'] });
                             setSelectedAppointment(null);
                         })
-                        .catch(() => toast.error(t('appointments.update_error') || 'Failed to update appointment'));
+                        .catch(() => toast.error(t('appointments.update_error')));
                 }}
                 onDelete={(id) => {
-                    if (confirm(t('appointments.delete_confirm') || 'Are you sure you want to permanently delete this appointment?')) {
+                    if (confirm(t('appointments.delete_confirm'))) {
                         appointmentsApi.delete(id)
                             .then(() => {
-                                toast.success(t('appointments.delete_success') || 'Appointment deleted');
+                                toast.success(t('appointments.delete_success'));
                                 queryClient.invalidateQueries({ queryKey: ['calendar-appointments'] });
                                 setSelectedAppointment(null);
                             })
-                            .catch(() => toast.error(t('appointments.delete_error') || 'Failed to delete appointment'));
+                            .catch(() => toast.error(t('appointments.delete_error')));
                     }
                 }}
             />
